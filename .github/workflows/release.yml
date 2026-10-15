@@ -1,0 +1,53 @@
+# Makes a GitHub release automatically for every new version.
+#
+# On every push to main: install, run the core tests, read the version from package.json and,
+# when there is no release with that version yet, create release vX.Y.Z with the text from
+# .homeychangelog.json (Dutch and English). Pushing the same version again does nothing, so a
+# new release appears exactly when the version number goes up.
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      - name: Core tests
+        run: npm test
+
+      - name: Version and release notes
+        id: info
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          node tools/release-notes.js "$VERSION" > notes.md
+          cat notes.md
+
+      - name: Create the release (only when it does not exist yet)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${{ steps.info.outputs.version }}"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists, nothing to do"
+          else
+            gh release create "$TAG" --target "$GITHUB_SHA" \
+              --title "Versie ${{ steps.info.outputs.version }}" \
+              --notes-file notes.md
+          fi

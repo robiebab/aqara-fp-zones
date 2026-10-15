@@ -1,0 +1,13 @@
+{
+  "type": "number",
+  "title": { "en": "Target distance", "nl": "Afstand tot persoon" },
+  "units": { "en": "m" },
+  "decimals": 2,
+  "min": 0,
+  "max": 10,
+  "getable": true,
+  "setable": false,
+  "insights": true,
+  "uiComponent": "sensor",
+  "icon": "/assets/distance.svg"
+}

@@ -1,0 +1,13 @@
+{
+  "type": "number",
+  "title": { "en": "AI spatial learning", "nl": "AI ruimtelijk leren" },
+  "units": { "en": "%" },
+  "decimals": 0,
+  "min": 0,
+  "max": 100,
+  "getable": true,
+  "setable": false,
+  "insights": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/learning.svg"
+}

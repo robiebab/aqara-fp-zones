@@ -1,0 +1,302 @@
+{
+  "triggers": [
+    {
+      "id": "target_distance_changed",
+      "title": {
+        "en": "Distance changed",
+        "nl": "Afstand is veranderd"
+      },
+      "tokens": [
+        {
+          "name": "target_distance",
+          "type": "number",
+          "title": {
+            "en": "distance (m)",
+            "nl": "afstand (m)"
+          },
+          "example": 1.25
+        }
+      ]
+    },
+    {
+      "id": "distance_below",
+      "title": {
+        "en": "Distance dropped below...",
+        "nl": "Afstand is kleiner geworden dan..."
+      },
+      "titleFormatted": {
+        "en": "Distance dropped below [[distance]] m",
+        "nl": "Afstand is kleiner geworden dan [[distance]] m"
+      },
+      "args": [
+        {
+          "name": "distance",
+          "type": "number",
+          "min": 0,
+          "max": 10,
+          "step": 0.05,
+          "placeholder": {
+            "en": "1.5"
+          }
+        }
+      ],
+      "tokens": [
+        {
+          "name": "distance",
+          "type": "number",
+          "title": {
+            "en": "distance (m)",
+            "nl": "afstand (m)"
+          },
+          "example": 1.2
+        }
+      ]
+    },
+    {
+      "id": "distance_above",
+      "title": {
+        "en": "Distance rose above...",
+        "nl": "Afstand is groter geworden dan..."
+      },
+      "titleFormatted": {
+        "en": "Distance rose above [[distance]] m",
+        "nl": "Afstand is groter geworden dan [[distance]] m"
+      },
+      "args": [
+        {
+          "name": "distance",
+          "type": "number",
+          "min": 0,
+          "max": 10,
+          "step": 0.05,
+          "placeholder": {
+            "en": "1.5"
+          }
+        }
+      ],
+      "tokens": [
+        {
+          "name": "distance",
+          "type": "number",
+          "title": {
+            "en": "distance (m)",
+            "nl": "afstand (m)"
+          },
+          "example": 1.8
+        }
+      ]
+    },
+    {
+      "id": "entered_range",
+      "title": {
+        "en": "Someone entered distance range",
+        "nl": "Iemand komt binnen afstandsbereik"
+      },
+      "titleFormatted": {
+        "en": "Distance came between [[min]] and [[max]] m",
+        "nl": "Afstand komt tussen [[min]] en [[max]] m"
+      },
+      "args": [
+        {
+          "name": "min",
+          "type": "number",
+          "min": 0,
+          "max": 10,
+          "step": 0.05,
+          "placeholder": {
+            "en": "0"
+          }
+        },
+        {
+          "name": "max",
+          "type": "number",
+          "min": 0,
+          "max": 10,
+          "step": 0.05,
+          "placeholder": {
+            "en": "2"
+          }
+        }
+      ],
+      "tokens": [
+        {
+          "name": "distance",
+          "type": "number",
+          "title": {
+            "en": "distance (m)",
+            "nl": "afstand (m)"
+          },
+          "example": 1.2
+        }
+      ]
+    },
+    {
+      "id": "left_range",
+      "title": {
+        "en": "Someone left distance range",
+        "nl": "Iemand verlaat afstandsbereik"
+      },
+      "titleFormatted": {
+        "en": "Distance left [[min]] to [[max]] m",
+        "nl": "Afstand verlaat [[min]] tot [[max]] m"
+      },
+      "args": [
+        {
+          "name": "min",
+          "type": "number",
+          "min": 0,
+          "max": 10,
+          "step": 0.05,
+          "placeholder": {
+            "en": "0"
+          }
+        },
+        {
+          "name": "max",
+          "type": "number",
+          "min": 0,
+          "max": 10,
+          "step": 0.05,
+          "placeholder": {
+            "en": "2"
+          }
+        }
+      ],
+      "tokens": [
+        {
+          "name": "distance",
+          "type": "number",
+          "title": {
+            "en": "distance (m)",
+            "nl": "afstand (m)"
+          },
+          "example": 2.4
+        }
+      ]
+    },
+    {
+      "id": "fp300_learning_done",
+      "title": {
+        "nl": "AI ruimtelijk leren is klaar",
+        "en": "AI spatial learning finished"
+      },
+      "tokens": [
+        {
+          "name": "success",
+          "type": "boolean",
+          "title": {
+            "nl": "gelukt",
+            "en": "succeeded"
+          },
+          "example": true
+        }
+      ]
+    },
+    {
+      "id": "fp300_pir_on",
+      "title": {
+        "nl": "De PIR zag beweging",
+        "en": "The PIR saw movement"
+      },
+      "hint": {
+        "nl": "Alleen de PIR, los van de mmWave aanwezigheid. Werkt als Detectie met op mmWave + PIR of Alleen PIR staat. In mmWave + PIR modus zet de sensor de PIR uit zolang de mmWave al iemand ziet; dan komt deze kaart pas weer na een lege ruimte.",
+        "en": "Only the PIR, separate from the mmWave presence. Works when Detection with is mmWave + PIR or PIR only. In mmWave + PIR mode the sensor switches the PIR off while the mmWave already sees someone; this card then fires again after the room was empty."
+      }
+    },
+    {
+      "id": "fp300_pir_off",
+      "title": {
+        "nl": "De PIR ziet geen beweging meer",
+        "en": "The PIR no longer sees movement"
+      }
+    }
+  ],
+  "conditions": [
+    {
+      "id": "distance_between",
+      "title": {
+        "en": "Distance !{{is|is not}} between...",
+        "nl": "Afstand !{{is|is niet}} tussen..."
+      },
+      "titleFormatted": {
+        "en": "Distance !{{is|is not}} between [[min]] and [[max]] m",
+        "nl": "Afstand !{{is|is niet}} tussen [[min]] en [[max]] m"
+      },
+      "args": [
+        {
+          "name": "min",
+          "type": "number",
+          "min": 0,
+          "max": 10,
+          "step": 0.05,
+          "placeholder": {
+            "en": "0"
+          }
+        },
+        {
+          "name": "max",
+          "type": "number",
+          "min": 0,
+          "max": 10,
+          "step": 0.05,
+          "placeholder": {
+            "en": "2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fp300_pir_active",
+      "title": {
+        "nl": "De PIR ziet !{{wel|geen}} beweging",
+        "en": "The PIR !{{sees|does not see}} movement"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "start_tracking",
+      "title": {
+        "en": "Start distance measurement",
+        "nl": "Start afstandsmeting"
+      },
+      "hint": {
+        "en": "Sent right away. If the sensor is asleep it is sent again as soon as the sensor wakes up.",
+        "nl": "Wordt direct verstuurd. Slaapt de sensor, dan wordt het opnieuw verstuurd zodra de sensor wakker wordt."
+      }
+    },
+    {
+      "id": "set_range",
+      "title": {
+        "en": "Set detection range",
+        "nl": "Stel detectiebereik in"
+      },
+      "titleFormatted": {
+        "en": "Set detection range from [[min]] to [[max]] m",
+        "nl": "Stel detectiebereik in van [[min]] tot [[max]] m"
+      },
+      "args": [
+        {
+          "name": "min",
+          "type": "number",
+          "min": 0,
+          "max": 5.75,
+          "step": 0.25,
+          "placeholder": {
+            "en": "0"
+          }
+        },
+        {
+          "name": "max",
+          "type": "number",
+          "min": 0.25,
+          "max": 6,
+          "step": 0.25,
+          "placeholder": {
+            "en": "6"
+          }
+        }
+      ]
+    }
+  ]
+}

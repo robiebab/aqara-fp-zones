@@ -1,0 +1,12 @@
+{
+  "type": "number",
+  "title": { "en": "People", "nl": "Personen" },
+  "decimals": 0,
+  "min": 0,
+  "max": 10,
+  "getable": true,
+  "setable": false,
+  "insights": true,
+  "uiComponent": "sensor",
+  "icon": "/assets/people.svg"
+}

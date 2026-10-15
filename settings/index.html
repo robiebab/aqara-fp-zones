@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
+  <style>
+:root {
+  --paper: #ffffff;
+  --floor: #f2f5f8;
+  --ink: #17212b;
+  --muted: #5b6b7a;
+  --line: #dce3ea;
+  --radar: #0f7c8c;
+  --radar-soft: #e3f2f3;
+  --target: #f26b1d;
+  --danger: #c2352b;
+  --on-radar: #ffffff;
+  --radius-l: 18px;
+  --radius-s: 10px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+/* Dark colours follow Homey's own page, not the phone setting: fpTheme() in the script sets data-theme
+   from the background Homey actually draws, so the view always blends in. */
+:root[data-theme="dark"] {
+  --paper: #12181f;
+  --floor: #1f2730;
+  --ink: #eef2f6;
+  --muted: #9aa8b5;
+  --line: #2f3a46;
+  --radar: #3fb6c4;
+  --radar-soft: #16343a;
+  --on-radar: #08262b;
+}
+.fp { font-family: var(--font); color: var(--ink); background: transparent; font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+.fp * { box-sizing: border-box; }
+.fp h2 { font-size: 22px; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 6px; }
+.fp p { margin: 0 0 12px; color: var(--muted); max-width: 60ch; }
+.fp .num { font-variant-numeric: tabular-nums; }
+
+/* progress: a real sequence, so it is numbered */
+.fp-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0 18px; }
+.fp-steps span { height: 4px; border-radius: 4px; background: var(--line); transition: background .25s; }
+.fp-steps span.done { background: var(--radar); }
+.fp-step-label { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+
+/* sensor choice */
+.fp-choice { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px; margin-bottom: 10px; background: var(--paper); color: var(--ink);
+  border: 1.5px solid var(--line); border-radius: var(--radius-l); text-align: left; font: inherit; cursor: pointer; }
+.fp-choice[aria-pressed="true"] { border-color: var(--radar); background: var(--radar-soft); }
+.fp-choice svg { flex: 0 0 40px; height: 40px; }
+.fp-choice strong { display: block; font-weight: 600; }
+.fp-choice small { color: var(--muted); font-size: 13px; }
+
+/* map */
+.fp-map-wrap { position: relative; border-radius: var(--radius-l); overflow: hidden; background: var(--floor); }
+.fp-map { display: block; width: 100%; touch-action: none; cursor: crosshair; }
+.fp-map-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 10px 2px 0; font-size: 13px; color: var(--muted); }
+.fp-live { display: inline-flex; align-items: center; gap: 6px; }
+.fp-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.fp-live.on i { background: var(--target); animation: fp-pulse 1.6s ease-out infinite; }
+@keyframes fp-pulse { 0% { box-shadow: 0 0 0 0 rgba(242,107,29,.5); } 100% { box-shadow: 0 0 0 8px rgba(242,107,29,0); } }
+@media (prefers-reduced-motion: reduce) { .fp-live.on i { animation: none; } .fp-steps span { transition: none; } }
+
+/* switch */
+.fp-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.fp-switch input { appearance: none; -webkit-appearance: none; width: 34px; height: 20px; border-radius: 20px; background: var(--line); position: relative; margin: 0; cursor: pointer; transition: background .2s; }
+.fp-switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s; }
+.fp-switch input:checked { background: var(--radar); }
+.fp-switch input:checked::after { transform: translateX(14px); }
+
+/* form */
+.fp-field { margin: 0 0 18px; }
+.fp-field label { display: block; font-weight: 600; margin-bottom: 8px; }
+.fp-input { width: 100%; font: inherit; font-size: 17px; padding: 12px 14px; border-radius: var(--radius-s); border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); }
+.fp-input:focus { outline: none; border-color: var(--radar); }
+.fp-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.fp-chip { font: inherit; font-size: 14px; padding: 7px 12px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; }
+.fp .fp-chip[aria-pressed="true"] { border-color: var(--radar) !important; background: var(--radar-soft) !important; color: var(--ink) !important; }
+/* segmented control. Homey loads its own stylesheet on these pages that also styles buttons,
+   so the states here are forced, otherwise the chosen option is not visible. */
+.fp .fp-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px;
+  background: var(--floor); border: 1.5px solid var(--line); border-radius: 14px; }
+.fp .fp-seg > button { -webkit-appearance: none !important; appearance: none !important; margin: 0 !important;
+  border: 0 !important; border-radius: 10px !important; box-shadow: none !important; min-height: 0 !important;
+  background: transparent !important; color: var(--muted) !important; font: 600 14px var(--font) !important;
+  padding: 10px 4px !important; line-height: 1.2 !important; cursor: pointer; }
+.fp .fp-seg > button[aria-pressed="true"] { background: var(--radar) !important; color: var(--on-radar) !important;
+  box-shadow: 0 2px 6px rgba(15, 124, 140, .35) !important; }
+.fp .fp-seg > button:active:not([aria-pressed="true"]) { background: var(--radar-soft) !important; color: var(--ink) !important; }
+.fp .fp-seg-strong > button { padding: 12px 4px !important; font-size: 15px !important; }
+
+/* summary */
+.fp-summary { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; padding: 16px; border: 1.5px solid var(--line); border-radius: var(--radius-l); margin-top: 14px; }
+.fp-summary dt { color: var(--muted); }
+.fp-summary dd { margin: 0; font-weight: 600; text-align: right; }
+
+/* action bar */
+.fp-actions { position: sticky; bottom: 0; display: flex; gap: 10px; padding: 14px 0 6px; background: linear-gradient(to top, var(--paper) 70%, transparent); margin-top: 18px; }
+.fp-btn { font: inherit; font-weight: 600; font-size: 16px; padding: 14px 18px; border-radius: 14px; border: 0; cursor: pointer; }
+.fp-btn.primary { flex: 1; background: var(--radar); color: var(--on-radar); }
+.fp-btn.primary:disabled { opacity: .35; cursor: default; }
+.fp-btn.ghost { background: transparent; color: var(--ink); }
+.fp-btn.danger { background: transparent; color: var(--danger); }
+.fp :focus-visible { outline: 3px solid var(--radar); outline-offset: 2px; }
+
+.fp-note { font-size: 13px; color: var(--muted); }
+.fp-empty { padding: 28px 18px; text-align: center; border: 1.5px dashed var(--line); border-radius: var(--radius-l); color: var(--muted); }
+.fp-zonelist { display: grid; gap: 8px; margin-top: 14px; }
+.fp-zonerow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: var(--radius-s); background: var(--paper); color: var(--ink); font: inherit; text-align: left; cursor: pointer; width: 100%; }
+.fp .fp-zonerow[aria-pressed="true"] { border-color: var(--radar) !important; background: var(--radar-soft) !important; }
+.fp-zonerow i { width: 12px; height: 12px; border-radius: 3px; flex: 0 0 12px; }
+.fp-zonerow span { flex: 1; }
+.fp-zonerow small { color: var(--muted); }
+[hidden] { display: none !important; }
+.fp-actions.static { position: static; background: none; padding-top: 6px; }
+.fp-btn.danger.armed { background: var(--danger); color: #fff; }
+.fp-link { font: inherit; font-size: 13px; font-weight: 600; color: var(--radar); background: none; border: 0; padding: 4px 0; cursor: pointer; }
+.fp-tools { display: flex; gap: 8px; margin-top: 12px; }
+.fp-target { margin-top: 14px; padding: 14px; border: 1.5px solid var(--target); border-radius: var(--radius-l); }
+.fp-target strong { display: block; margin-bottom: 4px; }
+.fp-target .fp-tools { flex-wrap: wrap; align-items: center; margin-top: 4px; }
+
+/* press feedback: every button visibly reacts to a tap */
+.fp button { -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  transition: transform .08s ease, background-color .15s ease, filter .15s ease, opacity .15s ease; }
+.fp button:active:not(:disabled) { transform: scale(0.96); }
+.fp-btn.primary:active:not(:disabled), .fp-btn.danger.armed:active { filter: brightness(0.85); }
+.fp-btn.ghost:active:not(:disabled), .fp-btn.danger:active:not(:disabled) { background: var(--floor); }
+.fp-chip:active:not(:disabled), .fp-zonerow:active, .fp-choice:active, .fp-seg button:active:not([aria-pressed="true"]) { background: var(--radar-soft); }
+.fp-link:active { opacity: .55; }
+
+/* busy: the button shows a spinner while the sensor is being asked */
+.fp button.busy { position: relative; color: transparent !important; pointer-events: none; }
+.fp button.busy::after { content: ""; position: absolute; inset: 0; margin: auto; width: 18px; height: 18px; border-radius: 50%;
+  border: 2.5px solid var(--spin, var(--ink)); border-right-color: transparent; animation: fp-spin .7s linear infinite; }
+.fp-btn.primary.busy { --spin: var(--on-radar); }
+.fp-btn.danger.busy { --spin: var(--danger); }
+@keyframes fp-spin { to { transform: rotate(360deg); } }
+
+/* toast: short confirmation after an action */
+.fp-toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 10;
+  transform: translate(-50%, 16px); opacity: 0; pointer-events: none; max-width: calc(100% - 32px);
+  background: var(--ink); color: var(--paper); font: 600 14px var(--font); padding: 10px 16px; border-radius: 999px;
+  width: max-content; text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .18); transition: opacity .2s ease, transform .2s ease; }
+.fp-toast.show { opacity: 1; transform: translate(-50%, 0); }
+.fp-toast.error { background: var(--danger); color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  .fp button, .fp-toast { transition: none; }
+  .fp button:active:not(:disabled) { transform: none; }
+  .fp button.busy::after { animation-duration: 2s; }
+}
+.fp-btn.busy:disabled { opacity: 1; }
+
+/* panel and toolbar above the map */
+.fp-panel { margin-top: 16px; padding: 16px; border: 1.5px solid var(--line); border-radius: var(--radius-l); }
+.fp-toolbar { position: sticky; top: 0; z-index: 3; margin-top: 16px; padding: 10px 12px; display: grid; gap: 10px;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: var(--radius-l) var(--radius-l) 0 0; border-bottom: 0; }
+.fp-toolbar-row { display: flex; align-items: center; gap: 10px; }
+.fp-toolbar-row .fp-count { flex: 1; font-size: 14px; color: var(--muted); }
+.fp-toolbar-row .fp-btn.small { padding: 11px 14px; font-size: 15px; border-radius: 12px; }
+.fp-toolbar-row .fp-btn.primary.small { flex: 1; }
+.fp-toolbar + .fp-map-wrap { border-radius: 0 0 var(--radius-l) var(--radius-l); border: 1.5px solid var(--line); border-top: 0; }
+
+/* overlays on the map */
+.fp-overlay { position: absolute; left: 8px; right: 8px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.fp-overlay.top { top: 8px; }
+.fp-pill { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--paper) 88%, transparent); border: 1px solid var(--line); color: var(--ink);
+  font: 600 12px var(--font); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+button.fp-pill { cursor: pointer; -webkit-appearance: none; appearance: none; }
+.fp button.fp-pill[aria-pressed="true"] { background: var(--radar) !important; color: var(--on-radar) !important; border-color: var(--radar) !important; }
+.fp-map-wrap .fp-target { position: absolute; left: 8px; right: 8px; bottom: 8px; margin: 0; background: var(--paper);
+  box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+
+/* Homey's stylesheet also styles plain buttons. These rules win, so our buttons look the same everywhere. */
+.fp button { -webkit-appearance: none !important; appearance: none !important; margin: 0 !important; min-height: 0 !important;
+  height: auto !important; text-transform: none !important; letter-spacing: normal !important; line-height: 1.25 !important;
+  font-family: var(--font) !important; cursor: pointer; }
+.fp .fp-choice { display: flex !important; align-items: center; gap: 16px; width: 100% !important; margin-bottom: 10px !important;
+  padding: 16px !important; text-align: left !important; background: var(--paper) !important; color: var(--ink) !important;
+  border: 1.5px solid var(--line) !important; border-radius: var(--radius-l) !important; box-shadow: none !important; font-size: 15px !important; }
+.fp .fp-choice[aria-pressed="true"] { border-color: var(--radar) !important; background: var(--radar-soft) !important; }
+.fp .fp-choice svg { flex: 0 0 52px; width: 52px; height: 52px; color: var(--ink); }
+.fp .fp-choice strong { font-size: 16px; }
+.fp .fp-btn { border: 0 !important; border-radius: 14px !important; padding: 14px 18px !important; font-size: 16px !important;
+  font-weight: 600 !important; box-shadow: none !important; }
+.fp .fp-btn.primary { background: var(--radar) !important; color: var(--on-radar) !important; }
+.fp .fp-btn.primary:disabled { opacity: .35 !important; }
+.fp .fp-btn.ghost { background: transparent !important; color: var(--ink) !important; }
+.fp .fp-btn.danger { background: transparent !important; color: var(--danger) !important; }
+.fp .fp-btn.danger.armed { background: var(--danger) !important; color: #fff !important; }
+.fp .fp-chip { background: var(--paper) !important; color: var(--ink) !important; border: 1.5px solid var(--line) !important;
+  border-radius: 999px !important; padding: 7px 12px !important; font-size: 14px !important; font-weight: 500 !important; box-shadow: none !important; }
+.fp .fp-link { background: none !important; border: 0 !important; color: var(--radar) !important; padding: 4px 0 !important;
+  font-size: 13px !important; font-weight: 600 !important; box-shadow: none !important; }
+.fp .fp-zonerow { background: var(--paper) !important; color: var(--ink) !important; border: 1.5px solid var(--line) !important;
+  border-radius: var(--radius-s) !important; padding: 12px 14px !important; width: 100% !important; box-shadow: none !important; font-size: 15px !important; }
+
+/* the wizard fills the sheet: content on top, buttons at the bottom */
+.fp-wizard { display: flex; flex-direction: column; }
+.fp-wizard > section:not([hidden]) { flex: 1 0 auto; }
+.fp-wizard .fp-actions { margin-top: auto; padding-top: 18px; }
+
+/* custom number of seconds */
+.fp-custom { margin-top: 12px; }
+.fp-custom label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+.fp-custom-row { display: flex; align-items: center; gap: 10px; }
+.fp-custom-row .fp-input { max-width: 140px; }
+.fp-custom-row span { color: var(--muted); }
+.fp-input.invalid { border-color: var(--danger) !important; }
+.fp-error { color: var(--danger) !important; font-size: 13px; margin: 6px 0 0 !important; }
+.fp input[type=number]::-webkit-inner-spin-button, .fp input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.fp input[type=number] { -moz-appearance: textfield; }
+.fp-map-bar-top { margin: 0 2px 8px; }
+
+  </style>
+  <script>
+/*
+ * FP400 floor map with paintable cells, like the Aqara app.
+ * Grid: 16 columns x 20 rows of 0.5 m; x from -400 to 400 cm, y from 0 to 1000 cm in front of the sensor.
+ * Cell index = row * 16 + column (row 0 is closest to the sensor).
+ */
+var FP_ZONE_COLORS = ['#0f7c8c', '#6b5bd2', '#d9488b', '#c98a00', '#2e9e5b', '#3a7bd5', '#b4532a', '#6c7a89'];
+var FP_GRID = { cols: 16, rows: 20, cell: 50, xMin: -400 };
+
+/*
+ * Colours: follow Homey's look (light or dark). Signals, strongest first:
+ *   1. the user's own choice in the app settings ("light" or "dark")
+ *   2. a Homey dark mode class on the page
+ *   3. Homey's CSS variables (--homey-background-color / --homey-text-color), if this page has them
+ *   4. the real background colour of the page
+ *   5. the phone setting
+ * When the chosen look does not match the page background, the page background is painted too,
+ * so there is never a dark block on a white page or the other way around.
+ */
+function fpParseColor(c) {
+  if (!c || c === 'transparent') return null;
+  var v = c.match(/[\d.]+/g);
+  if (!v || v.length < 3) return null;
+  if (v.length > 3 && Number(v[3]) === 0) return null;
+  return v.slice(0, 3).map(Number);
+}
+function fpLum(rgb) { return (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255; }
+function fpResolveVar(name, prop) {
+  var probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;width:0;height:0;visibility:hidden;' + prop + ':var(' + name + ')';
+  document.body.appendChild(probe);
+  var value = getComputedStyle(probe)[prop === 'color' ? 'color' : 'backgroundColor'];
+  document.body.removeChild(probe);
+  var raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return raw ? fpParseColor(value) : null;
+}
+function fpTheme(pref) {
+  var root = document.documentElement, body = document.body;
+  var info = { pref: pref || 'auto' };
+  // measure Homey's page without our own paint
+  root.style.removeProperty('background'); body.style.removeProperty('background');
+  var classes = (root.className + ' ' + body.className).toLowerCase();
+  info.classes = classes.trim();
+  var pageBg = null;
+  for (var el = body; el && !pageBg; el = el.parentElement) {
+    pageBg = fpParseColor(getComputedStyle(el).backgroundColor);
+  }
+  info.pageBg = pageBg;
+  info.homeyBg = fpResolveVar('--homey-background-color', 'background-color');
+  info.homeyText = fpResolveVar('--homey-text-color', 'color');
+  info.prefersDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  var dark, source;
+  if (pref === 'light' || pref === 'dark') { dark = pref === 'dark'; source = 'choice'; }
+  else if (/homey-dark-mode|\bdark\b/.test(classes)) { dark = true; source = 'class'; }
+  else if (info.homeyBg) { dark = fpLum(info.homeyBg) < 0.5; source = 'homey-background'; }
+  else if (info.homeyText) { dark = fpLum(info.homeyText) > 0.5; source = 'homey-text'; }
+  else if (pageBg) { dark = fpLum(pageBg) < 0.5; source = 'page'; }
+  else { dark = info.prefersDark; source = 'phone'; }
+  info.dark = dark; info.source = source;
+
+  root.setAttribute('data-theme', dark ? 'dark' : 'light');
+  function fits(c) { return c && (fpLum(c) < 0.5) === dark; }
+  var paper = fits(info.homeyBg) ? info.homeyBg : fits(pageBg) ? pageBg : null;
+  if (paper) root.style.setProperty('--paper', 'rgb(' + paper.join(',') + ')'); else root.style.removeProperty('--paper');
+  var matches = fits(pageBg);
+  if (!matches) {
+    // The page behind this view does not match the chosen look: paint it ourselves.
+    root.style.setProperty('background', 'var(--paper)', 'important');
+    body.style.setProperty('background', 'var(--paper)', 'important');
+  }
+  info.painted = !matches;
+  return info;
+}
+
+/** Re-check the look a few times and whenever Homey or the phone changes it. */
+function fpWatchTheme(getPref, onChange) {
+  function run() { var info = fpTheme(getPref()); if (onChange) onChange(info); return info; }
+  [0, 300, 1000, 2500].forEach(function (ms) { setTimeout(run, ms); });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', run); else if (mq.addListener) mq.addListener(run);
+  }
+  if (window.MutationObserver) {
+    var obs = new MutationObserver(function () { run(); });
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  }
+  return run;
+}
+
+function fpCellInfo(cells) {
+  var rows = cells.map(function (c) { return Math.floor(c / FP_GRID.cols); });
+  return {
+    count: cells.length,
+    area: cells.length * 0.25,
+    from: rows.length ? Math.min.apply(null, rows) * 0.5 : 0,
+    to: rows.length ? (Math.max.apply(null, rows) + 1) * 0.5 : 0,
+  };
+}
+
+function FpMap(canvas, options) {
+  var self = this;
+  var G = FP_GRID;
+  // Free space around the grid (in cells), so people at the edge or right in front of the sensor stay visible.
+  var PAD = { side: 1, top: 1.9, bottom: 1.6 };
+  var ctx = canvas.getContext('2d');
+  var css = getComputedStyle(document.documentElement);
+  var data = { zones: {}, targets: [], zoneStates: {}, areas: { ignore: [], outside: [] } };
+  var draft = new Set(), editing = null, mode = null, last = null;
+  var drawnTargets = [], tap = null;
+  self.mirror = false;
+
+  function color(name) { return css.getPropertyValue(name).trim(); }
+
+  function resize() {
+    var w = canvas.clientWidth || 340;
+    var size = w / (G.cols + 2 * PAD.side);
+    var h = Math.round(size * (G.rows + PAD.top + PAD.bottom));
+    var r = window.devicePixelRatio || 1;
+    canvas.style.height = h + 'px';
+    canvas.width = Math.round(w * r);
+    canvas.height = Math.round(h * r);
+    ctx.setTransform(r, 0, 0, r, 0, 0);
+    self.w = w; self.h = h; self.size = size;
+    self.left = PAD.side * size;              // x of the grid's left edge
+    self.base = h - PAD.bottom * size;        // y of the grid's bottom edge (the sensor's wall)
+    render();
+  }
+
+  /* screen position of a cell (mirroring swaps columns) */
+  function cellRect(index) {
+    var col = index % G.cols, row = Math.floor(index / G.cols);
+    if (self.mirror) col = G.cols - 1 - col;
+    return { x: self.left + col * self.size, y: self.base - (row + 1) * self.size, s: self.size };
+  }
+  function cellAt(evt) {
+    var b = canvas.getBoundingClientRect();
+    var col = Math.floor((evt.clientX - b.left - self.left) / self.size);
+    var row = Math.floor((self.base - (evt.clientY - b.top)) / self.size);
+    if (col < 0 || col >= G.cols || row < 0 || row >= G.rows) return null;
+    if (self.mirror) col = G.cols - 1 - col;
+    return row * G.cols + col;
+  }
+  function sx(xcm) { var x = self.mirror ? -xcm : xcm; return self.left + (x - G.xMin) / G.cell * self.size; }
+  function sy(ycm) { return self.base - ycm / G.cell * self.size; }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+  function fillCell(index, style, alpha, inset) {
+    var c = cellRect(index), i = inset || 1.5;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = style;
+    roundRect(c.x + i, c.y + i, c.s - 2 * i, c.s - 2 * i, Math.min(5, c.s / 5));
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawArea(cell, type, strength) {
+    var c = cellRect(cell), i = 1.5;
+    if (type === 'ignore') {
+      fillCell(cell, '#c2352b', Math.min(1, 0.32 * strength));
+    } else {
+      fillCell(cell, color('--ink'), Math.min(1, 0.12 * strength));
+      ctx.save();
+      ctx.beginPath(); ctx.rect(c.x + i, c.y + i, c.s - 2 * i, c.s - 2 * i); ctx.clip();
+      ctx.strokeStyle = color('--muted'); ctx.lineWidth = 1; ctx.globalAlpha = Math.min(1, 0.5 * strength);
+      for (var k = -c.s; k < c.s; k += 6) { ctx.beginPath(); ctx.moveTo(c.x + k, c.y + c.s); ctx.lineTo(c.x + k + c.s, c.y); ctx.stroke(); }
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    if (!self.w) return;
+    var W = self.w, H = self.h;
+    ctx.clearRect(0, 0, W, H);
+
+    var ox = sx(0), oy = self.base;
+
+    // empty cells
+    for (var i = 0; i < G.cols * G.rows; i++) fillCell(i, color('--line'), 0.45, 2.5);
+
+    // metre labels every 2 m on the left edge
+    ctx.fillStyle = color('--muted'); ctx.font = '11px ' + color('--font');
+    for (var m = 2; m <= 10; m += 2) ctx.fillText(m + ' m', self.left + 4, sy(m * 100) + 12);
+
+    // the sensor's own areas: ignore spots (red) and outside the room (hatched)
+    ['outside', 'ignore'].forEach(function (type) {
+      if (editing === 'area:' + type) return;
+      (data.areas[type] || []).forEach(function (cell) { drawArea(cell, type, 1); });
+    });
+
+    // saved zones; the one being edited is drawn from the draft instead
+    Object.keys(data.zones).forEach(function (id) {
+      if (String(id) === String(editing)) return;
+      var z = data.zones[id], c = FP_ZONE_COLORS[(id - 1) % 8], st = data.zoneStates[id] || {};
+      (z.cells || []).forEach(function (cell) { fillCell(cell, c, st.occupied ? 0.75 : 0.4); });
+      label(z.name, z.cells, c);
+    });
+
+    // draft (painting)
+    if (typeof editing === 'string' && editing.indexOf('area:') === 0) {
+      var type = editing.slice(5);
+      draft.forEach(function (cell) { drawArea(cell, type, 1.6); });
+    } else {
+      var draftColor = editing && editing !== 'new' ? FP_ZONE_COLORS[(editing - 1) % 8] : color('--ink');
+      draft.forEach(function (cell) { fillCell(cell, draftColor, 0.95); });
+    }
+
+    // people
+    // people: never drawn off the map; outside the grid they are clamped to the edge and shown with a ring.
+    // Targets on an ignore spot or outside the room are grey: they do not count for zones.
+    drawnTargets = [];
+    data.targets.forEach(function (p) {
+      var rad = Math.max(6, self.size * 0.32);
+      var px = sx(p.x), py = sy(p.y);
+      var cx = Math.min(Math.max(px, rad + 2), W - rad - 2), cy = Math.min(Math.max(py, rad + 2), H - rad - 2);
+      var outside = cx !== px || cy !== py || p.y < 0 || p.y >= G.rows * G.cell || p.x < G.xMin || p.x >= -G.xMin;
+      drawnTargets.push({ t: p, x: cx, y: cy, r: rad });
+      ctx.beginPath(); ctx.arc(cx, cy, rad, 0, 6.29);
+      if (p.ignored) {
+        ctx.fillStyle = color('--paper'); ctx.fill();
+        ctx.strokeStyle = color('--muted'); ctx.lineWidth = 3; ctx.stroke();
+      } else if (outside) {
+        ctx.strokeStyle = color('--target'); ctx.lineWidth = 3; ctx.stroke();
+      } else {
+        ctx.fillStyle = color('--target');
+        ctx.fill();
+        ctx.strokeStyle = color('--paper'); ctx.lineWidth = 2; ctx.stroke();
+      }
+    });
+
+    // sensor, on the wall just below the grid
+    ctx.fillStyle = color('--ink');
+    roundRect(ox - 16, oy + self.size * 0.55, 32, 6, 3); ctx.fill();
+  }
+
+  function label(name, cells, c) {
+    if (!cells || !cells.length) return;
+    // top row of the zone, leftmost cell on screen
+    var best = null;
+    cells.forEach(function (cell) {
+      var r = cellRect(cell);
+      if (!best || r.y < best.y || (r.y === best.y && r.x < best.x)) best = r;
+    });
+    ctx.font = '600 11px ' + color('--font');
+    var tw = ctx.measureText(name).width + 10;
+    var x = Math.min(best.x, self.w - tw - 2), y = Math.max(best.y - 18, 2);
+    ctx.fillStyle = color('--paper'); ctx.globalAlpha = 0.9; roundRect(x, y, tw, 16, 8); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.fillStyle = c; ctx.fillText(name, x + 5, y + 12);
+  }
+
+  /* painting: the first cell decides whether this stroke paints or erases */
+  function apply(cell) {
+    if (cell === null) return;
+    if (mode === 'paint') draft.add(cell); else draft.delete(cell);
+  }
+  function line(a, b) {
+    // walk the grid between two cells so a fast swipe leaves no gaps
+    var ac = a % G.cols, ar = Math.floor(a / G.cols), bc = b % G.cols, br = Math.floor(b / G.cols);
+    var steps = Math.max(Math.abs(bc - ac), Math.abs(br - ar));
+    for (var s = 1; s <= steps; s++) {
+      apply(Math.round(ar + (br - ar) * s / steps) * G.cols + Math.round(ac + (bc - ac) * s / steps));
+    }
+  }
+  function hitTarget(e) {
+    var b = canvas.getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top;
+    for (var i = drawnTargets.length - 1; i >= 0; i--) {
+      var d = drawnTargets[i];
+      if (Math.hypot(d.x - x, d.y - y) <= d.r + 6) return d;
+    }
+    return null;
+  }
+  canvas.addEventListener('pointerdown', function (e) {
+    if (options.onTargetTap) {
+      var hit = hitTarget(e);
+      if (hit) { tap = { t: hit.t, x: e.clientX, y: e.clientY }; return; }
+    }
+    if (!options.paint) return;
+    var cell = cellAt(e);
+    if (cell === null) return;
+    mode = draft.has(cell) ? 'erase' : 'paint';
+    apply(cell); last = cell;
+    canvas.setPointerCapture(e.pointerId);
+    render(); changed();
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    if (!mode) return;
+    var cell = cellAt(e);
+    if (cell === null || cell === last) return;
+    line(last, cell); last = cell;
+    render(); changed();
+  });
+  function end() { mode = null; last = null; }
+  canvas.addEventListener('pointerup', function (e) {
+    if (tap) {
+      var moved = Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 10;
+      var t = tap.t; tap = null;
+      if (!moved) options.onTargetTap(t);
+    }
+    end();
+  });
+  canvas.addEventListener('pointercancel', function () { tap = null; end(); });
+  window.addEventListener('resize', resize);
+
+  function changed() { if (options.onChange) options.onChange(self.getDraft()); }
+
+  self.setData = function (d) {
+    data = { zones: d.zones || {}, targets: d.targets || [], zoneStates: d.zoneStates || {}, areas: d.areas || { ignore: [], outside: [] } };
+    if (!mode) render();
+  };
+  /* editing: slot id of the zone being edited, 'new' for a new zone, null for none */
+  self.edit = function (slot, cells) {
+    editing = slot;
+    draft = new Set(cells || []);
+    render();
+  };
+  self.clear = function () { draft = new Set(); render(); changed(); };
+  self.getDraft = function () { return Array.from(draft).sort(function (a, b) { return a - b; }); };
+  self.cellsAround = function (t) {
+    var col = Math.floor((t.x - G.xMin) / G.cell), row = Math.floor(t.y / G.cell), out = [];
+    // the 2 x 2 cells (1 x 1 m) whose shared corner is nearest to the target
+    var c0 = (t.x - G.xMin) / G.cell - col < 0.5 ? col - 1 : col;
+    var r0 = t.y / G.cell - row < 0.5 ? row - 1 : row;
+    for (var r = r0; r <= r0 + 1; r++) for (var c = c0; c <= c0 + 1; c++) {
+      if (r >= 0 && r < G.rows && c >= 0 && c < G.cols) out.push(r * G.cols + c);
+    }
+    return out;
+  };
+  self.render = render;
+  self.resize = resize;
+  resize();
+}
+
+/*
+ * "Zone is empty after": quick choices plus "Custom" with a number field (0 to 300 seconds,
+ * the range the zone logic accepts). Built once, so typing in the field never loses focus.
+ * onChange(seconds) gets a whole number, or null while the field holds something invalid.
+ */
+function FpTimeoutPicker(seg, field, input, error, labels, onChange) {
+  var PRESETS = [0, 5, 15, 30];
+  var MAX = 300;
+  var custom = false;
+  var buttons = [];
+  seg.innerHTML = '';
+  PRESETS.concat(['custom']).forEach(function (p) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'num';
+    b.textContent = p === 'custom' ? labels.custom : p + ' s';
+    b.addEventListener('click', function () {
+      if (p === 'custom') {
+        custom = true;
+        render();
+        input.focus();
+        report();
+      } else {
+        custom = false;
+        input.value = String(p);
+        render();
+        onChange(p);
+      }
+    });
+    buttons.push({ el: b, value: p });
+    seg.appendChild(b);
+  });
+  input.setAttribute('min', '0');
+  input.setAttribute('max', String(MAX));
+  input.setAttribute('step', '1');
+  input.setAttribute('inputmode', 'numeric');
+  input.addEventListener('input', report);
+
+  function parse() {
+    var raw = String(input.value).trim();
+    if (!/^\d+$/.test(raw)) return null;
+    var n = Number(raw);
+    return n >= 0 && n <= MAX ? n : null;
+  }
+  function report() {
+    var n = parse();
+    error.hidden = n !== null;
+    error.textContent = labels.invalid;
+    input.classList.toggle('invalid', n === null);
+    onChange(n);
+  }
+  function render() {
+    var current = parse();
+    buttons.forEach(function (b) {
+      var on = b.value === 'custom' ? custom : (!custom && current === b.value);
+      b.el.setAttribute('aria-pressed', String(on));
+    });
+    field.hidden = !custom;
+    if (!custom) { error.hidden = true; input.classList.remove('invalid'); }
+  }
+  return {
+    set: function (seconds) {
+      if (document.activeElement === input) return;
+      input.value = String(seconds);
+      custom = PRESETS.indexOf(seconds) < 0;
+      render();
+    },
+  };
+}
+
+/*
+ * FP300 distance strip: 24 blocks of 0.25 m in front of the sensor (0 m at the bottom, 6 m at the top).
+ * Same interface as FpMap (setData, edit, clear, getDraft, render, resize), so pages can swap them.
+ * The block where the sensor measures the nearest person lights up.
+ */
+var FP_BLOCKS = 24, FP_BLOCK = 0.25;
+
+function fpBlockInfo(blocks) {
+  return {
+    count: blocks.length,
+    from: blocks.length ? Math.min.apply(null, blocks) * FP_BLOCK : 0,
+    to: blocks.length ? (Math.max.apply(null, blocks) + 1) * FP_BLOCK : 0,
+  };
+}
+
+function FpRow(canvas, options) {
+  var self = this;
+  var ctx = canvas.getContext('2d');
+  var css = getComputedStyle(document.documentElement);
+  var data = { zones: {}, zoneStates: {}, block: null, presence: null };
+  var draft = new Set(), editing = null, mode = null, last = null, pulse = 0, timer = null;
+  var LANE = 9, LABEL = 40, BOTTOM = 26;
+  self.top = options.topPad || 14;
+  self.mirror = false; // not used for a strip, kept for the same interface
+
+  function color(name) { return css.getPropertyValue(name).trim(); }
+  function zoneBlocks(z) { return z.blocks || z.cells || []; }
+
+  function resize() {
+    var w = canvas.clientWidth || 340;
+    var rowH = Math.max(18, Math.min(26, Math.round(w / 15)));
+    if (options.fitHeight) {
+      // make all 6 m fit in the space the page has left, so nobody has to scroll over the strip
+      var avail = options.fitHeight();
+      if (avail > 0) rowH = Math.max(12, Math.min(26, Math.floor((avail - self.top - BOTTOM) / FP_BLOCKS)));
+    }
+    var h = self.top + FP_BLOCKS * rowH + BOTTOM;
+    var r = window.devicePixelRatio || 1;
+    canvas.style.height = h + 'px';
+    canvas.width = Math.round(w * r); canvas.height = Math.round(h * r);
+    ctx.setTransform(r, 0, 0, r, 0, 0);
+    self.w = w; self.h = h; self.rowH = rowH;
+    render();
+  }
+  function lanesWidth() { return Object.keys(data.zones).length * (LANE + 4); }
+  function blockRect(b) {
+    var x = LABEL, wid = self.w - LABEL - 8 - lanesWidth();
+    return { x: x, y: self.top + (FP_BLOCKS - 1 - b) * self.rowH, w: wid, h: self.rowH };
+  }
+  function blockAt(evt) {
+    var bb = canvas.getBoundingClientRect(), y = evt.clientY - bb.top, x = evt.clientX - bb.left;
+    if (x < LABEL - 10) return null;
+    var b = FP_BLOCKS - 1 - Math.floor((y - self.top) / self.rowH);
+    return b >= 0 && b < FP_BLOCKS ? b : null;
+  }
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+
+  function render() {
+    if (!self.w) return;
+    ctx.clearRect(0, 0, self.w, self.h);
+    var draftColor = editing === 'range' ? color('--radar')
+      : editing && editing !== 'new' ? FP_ZONE_COLORS[(editing - 1) % 8] : color('--ink');
+    ctx.font = '11px ' + color('--font');
+    for (var b = 0; b < FP_BLOCKS; b++) {
+      var r = blockRect(b), on = draft.has(b), here = data.block === b;
+      ctx.globalAlpha = on ? 0.9 : 0.45;
+      ctx.fillStyle = on ? draftColor : color('--line');
+      roundRect(r.x, r.y + 1.5, r.w, r.h - 3, 5); ctx.fill();
+      ctx.globalAlpha = 1;
+      if (here) {
+        // the block where the sensor sees someone: bright outline and a dot, gently pulsing
+        var glow = 0.55 + 0.45 * Math.abs(Math.sin(pulse));
+        ctx.strokeStyle = color('--target'); ctx.lineWidth = 3; ctx.globalAlpha = glow;
+        roundRect(r.x + 1.5, r.y + 3, r.w - 3, r.h - 6, 5); ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.fillStyle = color('--target');
+        ctx.beginPath(); ctx.arc(r.x + r.w / 2, r.y + r.h / 2, Math.min(7, r.h / 3), 0, 6.29); ctx.fill();
+      }
+      if (b % 4 === 0) {
+        ctx.fillStyle = color('--muted');
+        ctx.fillText((b * FP_BLOCK).toFixed(0) + ' m', 4, r.y + r.h + 4);
+      }
+      if (b % 2 === 0 && b % 4 !== 0 && self.rowH >= 16) {
+        ctx.fillStyle = color('--muted'); ctx.globalAlpha = 0.6;
+        ctx.fillText((b * FP_BLOCK).toFixed(1).replace('.', ','), 4, r.y + r.h + 4);
+        ctx.globalAlpha = 1;
+      }
+    }
+    ctx.fillStyle = color('--muted');
+    ctx.fillText('6 m', 4, self.top + 4);
+
+    // other zones as coloured lanes on the right
+    var ids = Object.keys(data.zones), lx = self.w - 8 - lanesWidth();
+    ids.forEach(function (id, i) {
+      var z = data.zones[id], c = FP_ZONE_COLORS[(id - 1) % 8], st = data.zoneStates[id] || {};
+      var x = lx + 4 + i * (LANE + 4);
+      zoneBlocks(z).forEach(function (blk) {
+        var r = blockRect(blk);
+        ctx.globalAlpha = String(id) === String(editing) ? 1 : (st.occupied ? 0.9 : 0.5);
+        ctx.fillStyle = c; roundRect(x, r.y + 1.5, LANE, r.h - 3, 3); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+    });
+
+    // sensor at the bottom
+    ctx.fillStyle = color('--ink');
+    roundRect(LABEL + (self.w - LABEL - 8 - lanesWidth()) / 2 - 16, self.h - BOTTOM + 14, 32, 6, 3); ctx.fill();
+  }
+
+  function apply(b) { if (b === null) return; if (mode === 'paint') draft.add(b); else draft.delete(b); }
+  canvas.addEventListener('pointerdown', function (e) {
+    if (!options.paint) return;
+    var b = blockAt(e); if (b === null) return;
+    mode = draft.has(b) ? 'erase' : 'paint';
+    apply(b); last = b; canvas.setPointerCapture(e.pointerId); render(); changed();
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    if (!mode) return;
+    var b = blockAt(e); if (b === null || b === last) return;
+    var step = b > last ? 1 : -1;
+    for (var k = last + step; k !== b + step; k += step) apply(k);
+    last = b; render(); changed();
+  });
+  function end() { mode = null; last = null; }
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', end);
+  window.addEventListener('resize', resize);
+  function changed() { if (options.onChange) options.onChange(self.getDraft()); }
+
+  function animate() {
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (timer) clearInterval(timer);
+    timer = null;
+    if (data.block !== null && !reduce) timer = setInterval(function () { pulse += 0.25; render(); }, 60);
+  }
+
+  self.setData = function (d) {
+    data = { zones: d.zones || {}, zoneStates: d.zoneStates || {}, block: d.block === undefined ? null : d.block, presence: d.presence };
+    if ((data.block !== null) !== (timer !== null)) animate();
+    if (!mode) render();
+  };
+  self.edit = function (slot, blocks) { editing = slot; draft = new Set(blocks || []); render(); };
+  self.clear = function () { draft = new Set(); render(); changed(); };
+  self.getDraft = function () { return Array.from(draft).sort(function (a, b) { return a - b; }); };
+  self.setPaint = function (on) { options.paint = on; };
+  self.destroy = function () { if (timer) clearInterval(timer); timer = null; };
+  self.render = render;
+  self.resize = resize;
+  resize();
+}
+  </script>
+</head>
+<body>
+<div class="fp" id="fp">
+  <h2 data-t="title"></h2>
+  <p data-t="intro"></p>
+
+  <div id="sensors"></div>
+
+  <div id="editor" hidden>
+    <div class="fp-seg fp-seg-strong" id="modes" role="tablist">
+      <button data-mode="zones" data-t="mode_zones"></button>
+      <button data-mode="ignore" data-t="mode_ignore"></button>
+      <button data-mode="outside" data-t="mode_outside"></button>
+      <button data-mode="range" data-t="mode_range"></button>
+    </div>
+    <p class="fp-note" id="modeHint" style="margin-top:10px"></p>
+
+    <div id="zonesBox">
+      <div class="fp-zonelist" id="zones"></div>
+    </div>
+
+    <div id="form" hidden class="fp-panel">
+      <div class="fp-field">
+        <label for="name" data-t="name"></label>
+        <input class="fp-input" id="name" maxlength="32" autocomplete="off">
+      </div>
+      <div class="fp-field" style="margin-bottom:0">
+        <label data-t="empty_after"></label>
+        <div class="fp-seg" id="timeouts"></div>
+        <div class="fp-custom" id="customField" hidden>
+          <label for="customSeconds" data-t="custom_label"></label>
+          <div class="fp-custom-row"><input class="fp-input num" id="customSeconds" type="number"><span data-t="seconds"></span></div>
+          <p class="fp-error" id="customError" hidden></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- toolbar: everything you need while painting sits right above the map -->
+    <div class="fp-toolbar">
+      <div class="fp-toolbar-row">
+        <span class="num fp-count" id="cellInfo"></span>
+        <button class="fp-link" id="clear" data-t="clear"></button>
+      </div>
+      <div class="fp-toolbar-row" id="zoneActions" hidden>
+        <button class="fp-btn danger small" id="remove" data-t="remove"></button>
+        <button class="fp-btn primary small" id="save" data-t="save"></button>
+      </div>
+      <div class="fp-toolbar-row" id="areaActions" hidden>
+        <button class="fp-btn ghost small" id="areaReset" data-t="area_reset"></button>
+        <button class="fp-btn primary small" id="areaSave" data-t="area_save"></button>
+      </div>
+    </div>
+
+    <div class="fp-map-wrap">
+      <canvas class="fp-map" id="map"></canvas>
+      <canvas class="fp-map" id="row" hidden></canvas>
+      <div class="fp-overlay top">
+        <span class="fp-pill fp-live" id="live"><i></i><span id="liveText"></span></span>
+        <button class="fp-pill" id="mirror" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M9 7 4 12l5 5V7z"/><path d="M15 7l5 5-5 5V7z"/></svg>
+          <span data-t="mirror_short"></span>
+        </button>
+      </div>
+      <div class="fp-target" id="targetPanel" hidden>
+        <strong id="targetTitle"></strong>
+        <p class="fp-note" data-t="target_text"></p>
+        <div class="fp-tools">
+          <button class="fp-chip" id="forget" data-t="forget"></button>
+          <button class="fp-chip" id="ignoreHere" data-t="ignore_here"></button>
+          <button class="fp-link" id="targetClose" data-t="close"></button>
+        </div>
+      </div>
+    </div>
+
+    <p class="fp-note" id="formHint" style="margin-top:12px"></p>
+    <p class="fp-note" id="areaHint" style="margin-top:12px" hidden></p>
+    <p class="fp-note" style="margin-top:6px" data-t="add_hint"></p>
+  </div>
+
+  <div class="fp-field" style="margin-top:22px">
+    <label data-t="theme"></label>
+    <div class="fp-seg" id="themeChoice">
+      <button data-theme="auto" data-t="theme_auto"></button>
+      <button data-theme="light" data-t="theme_light"></button>
+      <button data-theme="dark" data-t="theme_dark"></button>
+    </div>
+    <p class="fp-note" style="margin-top:8px" data-t="theme_hint"></p>
+  </div>
+</div>
+
+<script>
+function onHomeyReady(Homey) {
+  var $ = function (id) { return document.getElementById(id); };
+  var t = function (key, tokens) { return Homey.__('editor.' + key, tokens); };
+  var m = function (v) { return String(Math.round(v * 100) / 100).replace('.', ','); };
+
+  // iOS only shows :active styles when the page listens to touches
+  document.addEventListener('touchstart', function () {}, { passive: true });
+  var themePref = 'auto', themeLogged = false;
+  var rerunTheme = fpWatchTheme(function () { return themePref; }, function (info) {
+    if (typeof map !== 'undefined' && map) map.render();
+    if (!themeLogged) {
+      themeLogged = true;
+      setTimeout(function () { Homey.api('POST', '/debug/theme', fpTheme(themePref), function () {}); }, 1200);
+    }
+  });
+  function renderThemeChoice() {
+    document.querySelectorAll('#themeChoice button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.theme === themePref)); });
+  }
+  Homey.get('theme', function (err, v) { themePref = (!err && v) || 'auto'; renderThemeChoice(); rerunTheme(); });
+  document.querySelectorAll('#themeChoice button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      themePref = b.dataset.theme; renderThemeChoice(); rerunTheme();
+      Homey.set('theme', themePref, function () {});
+    });
+  });
+
+  var toastEl = document.createElement('div');
+  toastEl.className = 'fp-toast';
+  toastEl.setAttribute('role', 'status');
+  document.body.appendChild(toastEl);
+  var toastTimer = null;
+  function toast(msg, isError) {
+    toastEl.textContent = msg;
+    toastEl.classList.toggle('error', !!isError);
+    toastEl.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, isError ? 4000 : 2200);
+  }
+  function fail(err) { toast(err && err.message ? err.message : String(err), true); }
+
+  // Spinner on the button while the request runs; the button cannot be tapped twice.
+  function busy(btn, promise) {
+    btn.classList.add('busy'); btn.disabled = true;
+    function done() { btn.classList.remove('busy'); btn.disabled = false; }
+    return promise.then(function (r) { done(); return r; }, function (e) { done(); throw e; });
+  }
+  document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
+
+  var token = null, live = { zones: {}, zoneStates: {}, targets: [], areas: { ignore: [], outside: [] } }, selected = null, edit = null, timer = null;
+  var mode = 'zones', areaDraft = null, areaDirty = false, tapped = null;
+
+  // Painting is only possible on an existing zone or on an area. New zones are made via Add device.
+  var mapOptions = {
+    paint: false,
+    onChange: function (cells) {
+      if (mode !== 'zones') { areaDraft = cells; areaDirty = true; renderCellInfo(); renderAreaForm(); return; }
+      if (!edit) return;
+      edit.cells = cells;
+      renderCellInfo(); renderForm();
+    },
+    onTargetTap: function (t) { tapped = t; renderTarget(); },
+  };
+  var mapEditor = new FpMap($('map'), mapOptions);   // FP400: grid of 0.5 m cells
+  var rowEditor = new FpRow($('row'), {
+    paint: false,
+    onChange: mapOptions.onChange,
+    topPad: 46, // room for the Live label on top of the strip
+    // all 24 blocks fit in the screen below the sticky toolbar
+    fitHeight: function () {
+      var bar = document.querySelector('.fp-toolbar');
+      return window.innerHeight - (bar ? bar.offsetHeight : 90) - 24;
+    },
+  });   // FP300: strip of 0.25 m distance blocks
+  var map = mapEditor, kind = 'fp400', sensorList = [];
+  // the toolbar grows when a zone is chosen: re-fit the strip so all 6 m stay on screen
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () { if (kind === 'fp300') rowEditor.resize(); }).observe(document.querySelector('.fp-toolbar'));
+  }
+  function useEditor(k) {
+    kind = k || 'fp400';
+    map = kind === 'fp300' ? rowEditor : mapEditor;
+    $('map').hidden = kind === 'fp300';
+    $('row').hidden = kind !== 'fp300';
+    // FP400: zones, ignore spots, outside room. FP300: zones and its own detection range.
+    document.querySelectorAll('#modes button').forEach(function (b) {
+      var m = b.dataset.mode;
+      b.hidden = kind === 'fp300' ? (m === 'ignore' || m === 'outside') : m === 'range';
+    });
+    $('modes').hidden = false;
+    $('modeHint').hidden = false;
+    $('mirror').hidden = kind === 'fp300';
+    if (kind === 'fp300') { tapped = null; renderTarget(); }
+  }
+  function updatePaint() {
+    mapOptions.paint = mode !== 'zones' || !!edit;
+    if (rowEditor) rowEditor.setPaint(mode === 'range' || !!edit);
+  }
+
+  /* ---------- modes: zones, ignore spots, outside the room */
+  document.querySelectorAll('#modes button').forEach(function (b) {
+    b.addEventListener('click', function () { setMode(b.dataset.mode); });
+  });
+  function setMode(m, cells) {
+    mode = m;
+    document.querySelectorAll('#modes button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.mode === m)); });
+    $('modeHint').textContent = t('hint_' + m);
+    $('zonesBox').hidden = m !== 'zones';
+    $('form').hidden = m !== 'zones' || !edit;
+    $('zoneActions').hidden = $('form').hidden;
+    $('formHint').hidden = m !== 'zones';
+    if (m === 'zones') {
+      areaDraft = null; areaDirty = false;
+      map.edit(selected, edit ? edit.cells : []);
+    } else if (m === 'range') {
+      // FP300 detection range: the blocks in which the sensor itself detects presence
+      areaDraft = cells || (live.rangeBlocks || []).slice();
+      areaDirty = !!cells;
+      map.edit('range', areaDraft);
+    } else {
+      areaDraft = cells || (live.areas[m] || []).slice();
+      areaDirty = !!cells;
+      map.edit('area:' + m, areaDraft);
+    }
+    renderCellInfo(); renderAreaForm();
+  }
+  function renderAreaForm() {
+    $('areaActions').hidden = mode === 'zones';
+    $('areaHint').hidden = mode === 'zones';
+    if (mode === 'zones') return;
+    $('areaHint').textContent = areaDirty ? t('area_unsaved') : t('area_saved');
+    $('areaSave').disabled = !areaDirty;
+    $('areaReset').hidden = !areaDirty;
+  }
+  $('areaReset').addEventListener('click', function () { setMode(mode); });
+  $('areaSave').addEventListener('click', function () {
+    var type = mode;
+    if (type === 'range') {
+      busy($('areaSave'), api('PUT', '/fp400/' + encodeURIComponent(token) + '/range', { blocks: areaDraft }))
+        .then(function (res) { live.rangeBlocks = res.blocks; areaDirty = false; renderAreaForm(); toast(res.message || t('toast_area_saved')); })
+        .catch(function (err) { fail(err); renderAreaForm(); });
+      return;
+    }
+    busy($('areaSave'), api('PUT', '/fp400/' + encodeURIComponent(token) + '/areas/' + type, { cells: areaDraft }))
+      .then(function (areas) { live.areas = areas; areaDirty = false; map.setData(live); renderAreaForm(); toast(t('toast_area_saved')); })
+      .catch(function (err) { fail(err); renderAreaForm(); });
+  });
+
+  /* ---------- a tapped dot: forget it, or turn its spot into an ignore spot */
+  function renderTarget() {
+    $('targetPanel').hidden = !tapped;
+    if (!tapped) return;
+    $('targetTitle').textContent = t('target_title', { id: tapped.id, distance: (Math.hypot(tapped.x, tapped.y) / 100).toFixed(1).replace('.', ',') });
+  }
+  $('targetClose').addEventListener('click', function () { tapped = null; renderTarget(); });
+  $('forget').addEventListener('click', function () {
+    var id = tapped.id;
+    busy($('forget'), api('POST', '/fp400/' + encodeURIComponent(token) + '/targets/' + id + '/forget', {}))
+      .then(function () { tapped = null; renderTarget(); refresh(); toast(t('toast_forgotten', { id: id })); })
+      .catch(fail);
+  });
+  $('ignoreHere').addEventListener('click', function () {
+    var around = map.cellsAround(tapped);
+    var base = mode === 'ignore' && areaDraft ? areaDraft : (live.areas.ignore || []);
+    var merged = Array.from(new Set(base.concat(around))).sort(function (a, b) { return a - b; });
+    tapped = null; renderTarget();
+    setMode('ignore', merged);
+    toast(t('toast_ignore_added'));
+  });
+  function setMirror(on) {
+    map.mirror = on; map.render();
+    $('mirror').setAttribute('aria-pressed', String(on));
+  }
+  Homey.get('mirror', function (err, v) { setMirror(!err && v === true); });
+  $('mirror').addEventListener('click', function () {
+    var on = !map.mirror;
+    setMirror(on);
+    Homey.set('mirror', on, function () {});
+    toast(on ? t('toast_mirror_on') : t('toast_mirror_off'));
+  });
+  $('clear').addEventListener('click', function () { map.clear(); toast(t('toast_cleared')); });
+
+  function api(method, path, body) {
+    return new Promise(function (resolve, reject) {
+      Homey.api(method, path, body, function (err, res) { if (err) reject(err); else resolve(res); });
+    });
+  }
+
+  function renderSensors(list) {
+    sensorList = list;
+    var box = $('sensors');
+    box.innerHTML = '';
+    if (!list.length) { box.innerHTML = '<div class="fp-empty">' + t('no_sensor') + '</div>'; return; }
+    if (list.length === 1) { choose(list[0].token); return; }
+    list.forEach(function (s) {
+      var b = document.createElement('button');
+      b.className = 'fp-choice';
+      b.innerHTML = '<span><strong></strong><small></small></span>';
+      b.querySelector('strong').textContent = s.name;
+      b.querySelector('small').textContent = s.kind === 'fp300' ? 'FP300' : 'FP400';
+      b.addEventListener('click', function () {
+        box.querySelectorAll('.fp-choice').forEach(function (x) { x.setAttribute('aria-pressed', 'false'); });
+        b.setAttribute('aria-pressed', 'true');
+        choose(s.token);
+      });
+      box.appendChild(b);
+    });
+  }
+
+  function choose(tk) {
+    token = tk; selected = null; edit = null;
+    var found = sensorList.filter(function (x) { return x.token === tk; })[0];
+    useEditor(found && found.kind);
+    map.edit(null, []);
+    $('editor').hidden = false;
+    setTimeout(function () { map.resize(); }, 0);
+    if (timer) clearInterval(timer);
+    refresh(); timer = setInterval(refresh, 1000);
+    setMode('zones');
+    renderForm();
+    // the sensor is the source of truth for its own areas (the Aqara app can change them too)
+    if (kind === 'fp300') return;
+    api('GET', '/fp400/' + encodeURIComponent(token) + '/areas').then(function (areas) {
+      live.areas = areas; map.setData(live);
+      if (mode !== 'zones' && !areaDirty) setMode(mode);
+    }).catch(function () {});
+  }
+
+  function refresh() {
+    // nothing to update while the page is not visible (other app or tab in front)
+    if (!token || document.hidden) return Promise.resolve();
+    return api('GET', '/fp400/' + encodeURIComponent(token)).then(function (res) {
+      live = res;
+      if (!live.areas) live.areas = { ignore: [], outside: [] };
+      if (!live.targets) live.targets = [];
+      map.setData(res);
+      if (res.kind === 'fp300') {
+        var known = res.presence && res.block !== null && res.block !== undefined;
+        $('live').classList.toggle('on', !!known);
+        $('liveText').textContent = known
+          ? t('live_fp300', { distance: m(res.distance), age: res.distanceAge === null ? '?' : res.distanceAge })
+          : res.pirOnly ? t('live_fp300_pir')
+          : res.tracking === 'waiting' ? t('live_fp300_waiting')
+          : t(res.presence ? 'live_fp300_far' : 'live_fp300_off');
+        renderZones();
+        return;
+      }
+      if (tapped) {
+        var still = res.targets.filter(function (x) { return x.id === tapped.id; })[0];
+        if (still) { tapped = still; renderTarget(); }
+      }
+      $('live').classList.toggle('on', res.fresh);
+      $('liveText').textContent = res.fresh ? t('live_on', { count: res.targets.length }) : t('live_off');
+      renderZones();
+    }).catch(function (err) { $('liveText').textContent = err.message || String(err); });
+  }
+
+  function renderZones() {
+    var box = $('zones');
+    var ids = Object.keys(live.zones);
+    box.innerHTML = '';
+    ids.forEach(function (id) {
+      var z = live.zones[id], st = live.zoneStates[id] || {};
+      var row = document.createElement('button');
+      row.className = 'fp-zonerow';
+      row.setAttribute('aria-pressed', String(String(selected) === id));
+      row.innerHTML = '<i></i><span></span><small></small>';
+      row.querySelector('i').style.background = FP_ZONE_COLORS[(id - 1) % 8];
+      row.querySelector('span').textContent = z.name;
+      row.querySelector('small').textContent = st.available ? (st.occupied ? t('occupied', { count: st.count }) : t('empty')) : t('unknown');
+      row.addEventListener('click', function () { select(id); });
+      box.appendChild(row);
+    });
+    if (!ids.length && selected === null) box.innerHTML = '<div class="fp-empty">' + t('no_zones') + '</div>';
+  }
+
+  function select(id) {
+    selected = id;
+    disarm();
+    edit = JSON.parse(JSON.stringify(live.zones[id]));
+    // FP300 zones store "blocks"; edit them as "cells" so both sensors share one form
+    if (!edit.cells && edit.blocks) edit.cells = edit.blocks;
+    delete edit.blocks;
+    map.edit(id, edit.cells);
+    renderZones(); renderCellInfo(); renderForm();
+  }
+
+  function renderCellInfo() {
+    updatePaint();
+    if (kind === 'fp300' && mode === 'range') {
+      var rb = fpBlockInfo(areaDraft || []);
+      $('cellInfo').textContent = rb.count ? t('range_info', { from: m(rb.from), to: m(rb.to), count: rb.count }) : t('range_none');
+      $('clear').hidden = !rb.count;
+      return;
+    }
+    if (kind === 'fp300') {
+      var bl = edit && edit.cells ? edit.cells : [];
+      var bi = fpBlockInfo(bl);
+      $('cellInfo').textContent = !edit ? t('pick') : bi.count ? t(bi.count === 1 ? 'blocks_one' : 'blocks', { count: bi.count, from: m(bi.from), to: m(bi.to) }) : t('cells_none');
+      $('clear').hidden = !bi.count;
+      return;
+    }
+    if (mode !== 'zones') {
+      var a = fpCellInfo(areaDraft || []);
+      $('cellInfo').textContent = a.count ? t(a.count === 1 ? 'cells_one' : 'cells', { count: a.count, area: m(a.area) }) : t('cells_none');
+      $('clear').hidden = !a.count;
+      return;
+    }
+    var cells = edit && edit.cells ? edit.cells : [];
+    var info = fpCellInfo(cells);
+    $('cellInfo').textContent = !edit ? t('pick') : info.count ? t(info.count === 1 ? 'cells_one' : 'cells', { count: info.count, area: m(info.area) }) : t('cells_none');
+    $('clear').hidden = !info.count;
+  }
+
+  function renderForm() {
+    $('form').hidden = !edit || mode !== 'zones';
+    $('zoneActions').hidden = $('form').hidden;
+    if (!edit) { $('formHint').textContent = ''; return; }
+    if (document.activeElement !== $('name')) $('name').value = edit.name || '';
+    var linkedName = edit.uid && live.linked ? live.linked[edit.uid] : null;
+    // A zone with a device is removed by deleting that device in Homey; only loose zones can be removed here.
+    $('remove').hidden = !!linkedName;
+    $('formHint').textContent = linkedName ? t('linked_hint', { name: linkedName }) : t('loose_hint');
+    timeoutPicker.set(edit.absence_timeout);
+  }
+  var timeoutPicker = new FpTimeoutPicker($('timeouts'), $('customField'), $('customSeconds'), $('customError'),
+    { custom: t('custom'), invalid: t('custom_invalid') },
+    function (seconds) { if (edit) edit.absence_timeout = seconds; });
+  $('name').addEventListener('input', function () { if (edit) edit.name = this.value; });
+
+  $('save').addEventListener('click', function () {
+    if (!edit || !String(edit.name || '').trim()) return toast(t('need_name'), true);
+    if (edit.absence_timeout === null) return toast(t('custom_invalid'), true);
+    if (!edit.cells || !edit.cells.length) return toast(t('need_cells'), true);
+    var slot = selected;
+    busy($('save'), api('PUT', '/fp400/' + encodeURIComponent(token) + '/zones/' + slot, edit))
+      .then(function () { return refresh(); })
+      .then(function () { select(String(slot)); toast(t('toast_zone_saved')); })
+      .catch(fail);
+  });
+
+  // Two taps instead of Homey.confirm: works the same on every Homey version and keeps the user on the page.
+  var armTimer = null;
+  function disarm() {
+    if (armTimer) clearTimeout(armTimer);
+    armTimer = null;
+    $('remove').textContent = t('remove');
+    $('remove').classList.remove('armed');
+  }
+  $('remove').addEventListener('click', function () {
+    if (!armTimer) {
+      $('remove').textContent = t('remove_confirm');
+      $('remove').classList.add('armed');
+      armTimer = setTimeout(disarm, 4000);
+      return;
+    }
+    disarm();
+    var slot = selected;
+    busy($('remove'), api('DELETE', '/fp400/' + encodeURIComponent(token) + '/zones/' + slot)).then(function () {
+      selected = null; edit = null;
+      map.edit(null, []);
+      renderForm(); renderCellInfo();
+      toast(t('toast_zone_removed'));
+      return refresh();
+    }).catch(fail);
+  });
+
+  api('GET', '/fp400').then(function (list) { Homey.ready(); renderSensors(list); })
+    .catch(function (err) { Homey.ready(); Homey.alert(err.message || String(err)); });
+}
+</script>
+
+</body>
+</html>

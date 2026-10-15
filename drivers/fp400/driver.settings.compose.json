@@ -1,0 +1,205 @@
+[
+  {
+    "type": "group",
+    "label": {
+      "en": "Presence",
+      "nl": "Aanwezigheid"
+    },
+    "children": [
+      {
+        "id": "absence_timeout",
+        "type": "number",
+        "label": {
+          "en": "Absence delay (s)",
+          "nl": "Afwezigheidsvertraging (s)"
+        },
+        "value": 10,
+        "min": 0,
+        "max": 300,
+        "step": 1
+      },
+      {
+        "id": "sensitivity",
+        "type": "dropdown",
+        "label": {
+          "en": "Sensitivity",
+          "nl": "Gevoeligheid"
+        },
+        "value": "1",
+        "values": [
+          {
+            "id": "0",
+            "label": {
+              "en": "Low",
+              "nl": "Laag"
+            }
+          },
+          {
+            "id": "1",
+            "label": {
+              "en": "Medium",
+              "nl": "Midden"
+            }
+          },
+          {
+            "id": "2",
+            "label": {
+              "en": "High",
+              "nl": "Hoog"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "AI",
+      "nl": "AI"
+    },
+    "children": [
+      {
+        "id": "ai_high_precision",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "AI high precision person recognition",
+          "nl": "AI hoge precisie mensherkenning"
+        },
+        "hint": {
+          "en": "Better at telling people apart from other movement.",
+          "nl": "Onderscheidt mensen beter van andere beweging."
+        }
+      },
+      {
+        "id": "ai_adaptive",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "Adaptive sensitivity",
+          "nl": "Adaptieve gevoeligheid"
+        },
+        "hint": {
+          "en": "The sensor adjusts its sensitivity to the room by itself.",
+          "nl": "De sensor past zijn gevoeligheid zelf aan de ruimte aan."
+        }
+      },
+      {
+        "id": "ai_interference",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "AI interference detection",
+          "nl": "AI interferentiedetectie"
+        },
+        "hint": {
+          "en": "Recognises fans, curtains and other sources of interference.",
+          "nl": "Herkent ventilatoren, gordijnen en andere storingsbronnen."
+        }
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "nl": "Helderheid",
+      "en": "Light"
+    },
+    "children": [
+      {
+        "id": "lux_poll_interval",
+        "type": "number",
+        "label": {
+          "nl": "Opvragen elke (s)",
+          "en": "Ask every (s)"
+        },
+        "value": 60,
+        "min": 10,
+        "max": 3600,
+        "step": 10,
+        "hint": {
+          "nl": "Hoe vaak Homey de helderheid bij de sensor opvraagt. De FP400 stuurt helderheid niet uit zichzelf en heeft er, voor zover bekend, geen eigen instellingen voor; daarom regelt Homey dit. De FP400 werkt op netstroom, dus vaker opvragen kost geen batterij.",
+          "en": "How often Homey asks the sensor for the light level. The FP400 does not send light by itself and, as far as known, has no own settings for it; that is why Homey handles this. The FP400 is mains powered, so asking more often costs no battery."
+        }
+      },
+      {
+        "id": "lux_report_mode",
+        "type": "dropdown",
+        "label": {
+          "nl": "Helderheid: bijwerken bij",
+          "en": "Light: update on"
+        },
+        "value": "3",
+        "values": [
+          {
+            "id": "1",
+            "label": {
+              "nl": "Drempel",
+              "en": "Threshold"
+            }
+          },
+          {
+            "id": "2",
+            "label": {
+              "nl": "Interval",
+              "en": "Interval"
+            }
+          },
+          {
+            "id": "3",
+            "label": {
+              "nl": "Drempel en interval",
+              "en": "Threshold and interval"
+            }
+          }
+        ]
+      },
+      {
+        "id": "lux_report_interval",
+        "type": "number",
+        "label": {
+          "nl": "Helderheid: interval (s)",
+          "en": "Light: interval (s)"
+        },
+        "value": 600,
+        "min": 20,
+        "max": 3600,
+        "step": 20,
+        "hint": {
+          "nl": "Werk de waarde in Homey minstens zo vaak bij, ook zonder verandering.",
+          "en": "Update the value in Homey at least this often, also without change."
+        }
+      },
+      {
+        "id": "lux_report_threshold",
+        "type": "number",
+        "label": {
+          "nl": "Helderheid: drempel (%)",
+          "en": "Light: threshold (%)"
+        },
+        "value": 10,
+        "min": 3,
+        "max": 20,
+        "step": 0.5,
+        "hint": {
+          "nl": "Werk de waarde direct bij als de helderheid minstens zoveel procent veranderd is.",
+          "en": "Update the value right away when the light level changed by at least this percentage."
+        }
+      }
+    ]
+  },
+  {
+    "id": "zones_hint",
+    "type": "label",
+    "label": {
+      "en": "Zones",
+      "nl": "Zones"
+    },
+    "value": "App settings",
+    "hint": {
+      "en": "Draw zones on the map in the app settings of Aqara FP Zones. Then add each zone as a device via 'Zone (FP300 / FP400)'.",
+      "nl": "Teken zones op de kaart in de app instellingen van Aqara FP Zones. Voeg daarna elke zone toe als apparaat via 'Zone (FP300 / FP400)'."
+    }
+  }
+]

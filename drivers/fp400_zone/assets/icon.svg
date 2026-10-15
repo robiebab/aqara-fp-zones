@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960" fill="none" stroke="#000" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
+  <!-- room -->
+  <rect x="140" y="140" width="680" height="680" rx="64"/>
+  <!-- drawn zone -->
+  <rect x="236" y="236" width="420" height="340" rx="36" stroke-dasharray="64 52"/>
+  <!-- person in the zone -->
+  <circle cx="446" cy="350" r="48"/>
+  <path d="M356 500 q90 -96 180 0"/>
+  <!-- sensor on the wall -->
+  <rect x="400" y="760" width="160" height="60" rx="20" fill="#000"/>
+</svg>

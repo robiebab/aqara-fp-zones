@@ -1,0 +1,290 @@
+{
+  "0.1.0": {
+    "en": "First version: FP300 distance and detection range, FP400 software zones with a map.",
+    "nl": "Eerste versie: FP300 afstand en detectiebereik, FP400 software zones met een kaart."
+  },
+  "0.1.1": {
+    "en": "Removing zones works from the zone device and from the settings page. Zones and zone devices are linked by a unique id.",
+    "nl": "Zones verwijderen werkt via het zone apparaat en via de instellingen. Zones en zone apparaten zijn gekoppeld met een unieke id."
+  },
+  "0.2.0": {
+    "en": "Paint zones in any shape. FP300: AI interference detection, adaptive sensitivity, identify, restart and AI spatial learning. FP400: AI high precision recognition, adaptive sensitivity, AI interference detection, identify and AI spatial learning.",
+    "nl": "Zones in elke vorm inkleuren. FP300: AI interferentiedetectie, adaptieve gevoeligheid, identificeren, herstarten en AI ruimtelijk leren. FP400: AI hoge precisie mensherkenning, adaptieve gevoeligheid, AI interferentiedetectie, identificeren en AI ruimtelijk leren."
+  },
+  "0.2.1": {
+    "en": "New FP300 and FP400 icons.",
+    "nl": "Nieuwe iconen voor de FP300 en FP400."
+  },
+  "0.2.2": {
+    "en": "FP300 and FP400 icons follow the real sensor shapes.",
+    "nl": "FP300 en FP400 iconen volgen de echte vorm van de sensoren."
+  },
+  "0.2.3": {
+    "en": "Map has room around the grid so people near the edge stay visible. Field of view removed from the map.",
+    "nl": "De kaart heeft ruimte rond het raster, zodat personen aan de rand zichtbaar blijven. Het zichtveld is van de kaart gehaald."
+  },
+  "0.3.0": {
+    "en": "Ghost handling for the FP400: ignore spots and outside-room areas stored in the sensor, tap a dot to forget it, and zones never count dots on those spots.",
+    "nl": "Spookstippen aanpakken bij de FP400: negeerplekken en buiten de kamer in de sensor zelf, tik op een stip om hem te laten vergeten, en zones tellen stippen op die plekken nooit mee."
+  },
+  "0.3.1": {
+    "en": "Buttons on the map page show when they are pressed, show a spinner while the sensor is asked and confirm with a short message.",
+    "nl": "Knoppen op de kaartpagina laten zien dat je ze indrukt, tonen een draaiend rondje terwijl de sensor bezig is en bevestigen met een korte melding."
+  },
+  "0.3.2": {
+    "en": "Clearly visible choices for zones, ignore spots, outside room and empty after. All map controls sit above the map.",
+    "nl": "Duidelijk zichtbare keuzes voor zones, negeerplekken, buiten kamer en leeg na. Alle knoppen van de kaart staan boven de kaart."
+  },
+  "0.3.3": {
+    "en": "New zones are only created via Add device. The settings page edits existing zones, ignore spots and outside room.",
+    "nl": "Nieuwe zones maak je alleen via Apparaat toevoegen. In de app instellingen bewerk je bestaande zones, negeerplekken en buiten kamer."
+  },
+  "0.3.4": {
+    "en": "Wizard and settings follow Homey's own light or dark look and use the full height; buttons keep their style inside Homey.",
+    "nl": "Wizard en instellingen volgen de lichte of donkere weergave van Homey zelf en gebruiken de volle hoogte; knoppen houden hun opmaak in Homey."
+  },
+  "0.3.5": {
+    "en": "Better light and dark detection, an Appearance choice in the app settings, and a diagnostic log line.",
+    "nl": "Betere herkenning van licht en donker, een keuze Weergave in de app instellingen, en een logregel om het te controleren."
+  },
+  "0.3.6": {
+    "en": "Zone is empty after: choose Other to enter your own number of seconds (0 to 300).",
+    "nl": "Zone is leeg na: kies Anders om zelf een aantal seconden in te vullen (0 tot en met 300)."
+  },
+  "0.4.0": {
+    "en": "Zones for the FP300: pick distance blocks of 25 cm while the block you stand in lights up. The zone device works for FP300 and FP400.",
+    "nl": "Zones voor de FP300: kies afstandsblokken van 25 cm terwijl het blok waarin je staat oplicht. Het zone apparaat werkt voor FP300 en FP400."
+  },
+  "0.4.1": {
+    "en": "FP300 zone screens show when the distance measurement is still waiting for the sensor to wake up, or when the radar is off.",
+    "nl": "De zoneschermen van de FP300 laten zien wanneer de afstandsmeting nog wacht tot de sensor wakker wordt, of wanneer de radar uit staat."
+  },
+  "0.4.2": {
+    "en": "FP300 zone strip fits the screen: all 6 m visible without scrolling.",
+    "nl": "De FP300 zonestrook past op het scherm: alle 6 m zichtbaar zonder scrollen."
+  },
+  "0.4.3": {
+    "en": "FP300: distance measurement is kept running while someone is present (every 5 minutes, sent right away), settings are read from the sensor after start and confirmed after each change.",
+    "nl": "FP300: de afstandsmeting blijft lopen zolang er iemand is (elke 5 minuten, direct verstuurd), instellingen worden na het starten uit de sensor gelezen en na elke wijziging gecontroleerd."
+  },
+  "0.4.4": {
+    "en": "FP300: settings for how often temperature, humidity and light are measured, and report by interval, threshold or both.",
+    "nl": "FP300: instellingen voor hoe vaak temperatuur, luchtvochtigheid en helderheid gemeten worden, en rapporteren op interval, drempel of beide."
+  },
+  "0.4.5": {
+    "en": "FP300: after changing a setting you see when the sensor is expected to wake up and take it, a warning on the device while it waits, and a timeline message once it is applied.",
+    "nl": "FP300: na het wijzigen van een instelling zie je wanneer de sensor naar verwachting wakker wordt en hem overneemt, een waarschuwing op het apparaat zolang hij wacht, en een tijdlijnmelding zodra hij is toegepast."
+  },
+  "0.4.6": {
+    "en": "FP300 zones react faster: the distance measurement starts right when someone comes in, and can optionally keep running in an empty room.",
+    "nl": "FP300 zones reageren sneller: de afstandsmeting start direct als er iemand binnenkomt, en kan optioneel doorlopen in een lege ruimte."
+  },
+  "0.4.7": {
+    "en": "See when AI spatial learning is running and when it is done (warning on the device, timeline messages and a Flow trigger), and when a restarted FP300 is back.",
+    "nl": "Zie wanneer AI ruimtelijk leren bezig is en wanneer het klaar is (waarschuwing op het apparaat, tijdlijnmeldingen en een flowkaart), en wanneer een herstarte FP300 terug is."
+  },
+  "0.4.8": {
+    "en": "FP300: log every message during AI spatial learning, to find a possible 'done' signal.",
+    "nl": "FP300: elk bericht tijdens AI ruimtelijk leren wordt gelogd, om een mogelijk 'klaar' signaal te vinden."
+  },
+  "0.4.9": {
+    "en": "FP300: answers the sensor's time requests like Zigbee2MQTT, shows learning progress on the device, and ends learning early if the sensor reports it is done.",
+    "nl": "FP300: beantwoordt tijdverzoeken van de sensor zoals Zigbee2MQTT, toont de voortgang van het leren op het apparaat, en stopt eerder als de sensor meldt dat hij klaar is."
+  },
+  "0.5.0": {
+    "en": "FP400: settings for how often Homey asks for the light level, and update by interval, threshold or both.",
+    "nl": "FP400: instellingen voor hoe vaak Homey de helderheid opvraagt, en bijwerken op interval, drempel of beide."
+  },
+  "0.5.1": {
+    "en": "FP300 AI spatial learning progress follows the sensor's messages (6 in total), with a progress bar in the app settings.",
+    "nl": "De voortgang van AI ruimtelijk leren bij de FP300 volgt de berichten van de sensor (6 in totaal), met een voortgangsbalk in de app instellingen."
+  },
+  "0.5.2": {
+    "en": "FP300 AI spatial learning progress is shown in the device settings instead of the app settings.",
+    "nl": "De voortgang van AI ruimtelijk leren bij de FP300 staat nu in de instellingen van het apparaat in plaats van in de app instellingen."
+  },
+  "0.5.3": {
+    "en": "FP300 learning status in the device settings also shows how long ago the sensor's last message was, every minute.",
+    "nl": "De leerstatus van de FP300 in de apparaatinstellingen laat elke minuut ook zien hoe lang het laatste bericht van de sensor geleden is."
+  },
+  "0.5.4": {
+    "en": "FP300: no distance measurement is started while AI spatial learning runs.",
+    "nl": "FP300: tijdens AI ruimtelijk leren start de app geen afstandsmeting."
+  },
+  "0.5.5": {
+    "en": "FP300: walking past the sensor to wake it for AI spatial learning no longer starts a distance measurement.",
+    "nl": "FP300: langs de sensor lopen om hem wakker te maken voor AI ruimtelijk leren start geen afstandsmeting meer."
+  },
+  "0.5.6": {
+    "en": "FP300 learning progress is time based again (the time requests stopped once answered), shows minutes left and the learning state read from the sensor.",
+    "nl": "De leervoortgang van de FP300 is weer op tijd gebaseerd (de tijdverzoeken stopten zodra ze beantwoord werden), met resterende minuten en de leerstatus uit de sensor."
+  },
+  "0.5.7": {
+    "en": "FP300 diagnostics: status structs are logged as tag=value, and the learning state is read again 30 minutes after learning started.",
+    "nl": "FP300 diagnose: statusberichten worden gelogd als tag=waarde, en de leerstatus wordt 30 minuten na de start nogmaals uitgelezen."
+  },
+  "0.5.8": {
+    "en": "FP300 learning status uses the sensor's messages: start confirmation, empty room since, and the last message with its kind.",
+    "nl": "De leerstatus van de FP300 gebruikt de berichten van de sensor: bevestiging van de start, kamer leeg sinds, en het laatste bericht met wat het was."
+  },
+  "0.5.9": {
+    "en": "More efficient: zone clocks only run with zones, fewer attempts to reach a sleeping FP300, no FP400 people count reads in an empty room, map pages pause when not visible.",
+    "nl": "Efficiënter: zoneklokken lopen alleen als er zones zijn, minder pogingen om een slapende FP300 te bereiken, geen personentelling van de FP400 in een lege kamer, kaartpagina's pauzeren als ze niet zichtbaar zijn."
+  },
+  "0.5.10": {
+    "en": "Fix: the zone list was missing from the app settings page.",
+    "nl": "Opgelost: de zonelijst ontbrak in de app instellingen."
+  },
+  "0.5.11": {
+    "en": "FP300 zones also react to PIR movement when the mmWave presence lags behind; PIR movement also starts the distance measurement.",
+    "nl": "FP300 zones reageren ook op PIR beweging als de mmWave aanwezigheid achterloopt; PIR beweging start ook de afstandsmeting."
+  },
+  "0.5.12": {
+    "en": "Project handover: CLAUDE.md, UI sources and build script in the project, core tests (npm test).",
+    "nl": "Projectoverdracht: CLAUDE.md, UI bronnen en bouwscript in het project, kerntests (npm test)."
+  },
+  "0.5.13": {
+    "en": "FP300 faster: the distance start is sent before settings and no longer waits behind a busy configuration read; new PIR interval setting.",
+    "nl": "FP300 sneller: de start van de afstandsmeting gaat vóór instellingen en wacht niet meer achter het uitlezen van de configuratie; nieuwe instelling PIR interval."
+  },
+  "0.5.14": {
+    "en": "FP300: while someone is present (mmWave or PIR) and no distance came in for 2 minutes, the distance measurement is restarted right away.",
+    "nl": "FP300: zolang er iemand is (mmWave of PIR) en er 2 minuten geen afstand binnenkwam, wordt de afstandsmeting direct opnieuw gestart."
+  },
+  "0.5.15": {
+    "en": "FP300 diagnostics: every distance is logged with the time since the previous one.",
+    "nl": "FP300 diagnose: elke afstand wordt gelogd met de tijd sinds de vorige."
+  },
+  "0.5.16": {
+    "en": "Robert Hertzer as author and copyright holder; LICENSE file added.",
+    "nl": "Robert Hertzer als auteur en eigenaar; LICENSE bestand toegevoegd."
+  },
+  "0.5.17": {
+    "en": "FP300: the log explains after every PIR or presence detection whether a distance measurement starts, and why not.",
+    "nl": "FP300: de log legt na elke PIR of aanwezigheidsdetectie uit of de afstandsmeting start, en waarom niet."
+  },
+  "0.5.18": {
+    "en": "FP300 tracking session: PIR starts the distance measurement, it is kept running until both mmWave presence and PIR are off, PIR movement without a distance restarts it at once.",
+    "nl": "FP300 meetsessie: de PIR start de afstandsmeting, die blijft lopen tot mmWave aanwezigheid én PIR allebei uit zijn, en PIR beweging zonder afstand herstart hem direct."
+  },
+  "0.5.19": {
+    "en": "Log lines of FP300 and FP400 start with the device name.",
+    "nl": "Logregels van FP300 en FP400 beginnen met de naam van het apparaat."
+  },
+  "0.5.20": {
+    "en": "FP300 log shows mmWave presence and PIR on/off and the radar settings read from the sensor.",
+    "nl": "De FP300 log toont mmWave aanwezigheid en PIR aan/uit, en de radarinstellingen uit de sensor."
+  },
+  "0.5.21": {
+    "en": "FP300: when a sensor takes the start but sends no distance, the app asks for the distance itself during a session, and asks the sensor once to report it.",
+    "nl": "FP300: als een sensor de start ontvangt maar geen afstand stuurt, vraagt de app tijdens een sessie zelf de afstand op, en vraagt hij de sensor eenmalig om die te rapporteren."
+  },
+  "0.5.22": {
+    "en": "FP300: sensors that do not push distances are asked for the distance every 3 seconds during a session.",
+    "nl": "FP300: sensoren die zelf geen afstand sturen, worden tijdens een sessie elke 3 seconden om de afstand gevraagd."
+  },
+  "0.5.23": {
+    "en": "FP300: distance polling switched off again; the polled value was the last stored distance, not a live one.",
+    "nl": "FP300: het opvragen van de afstand elke 3 seconden staat weer uit; de opgevraagde waarde was de laatst bewaarde afstand, niet een live meting."
+  },
+  "0.5.24": {
+    "en": "FP300: new setting to let a sensor report the distance by itself; makes room in the sensor's report list by removing standard light, humidity or temperature reports if needed, and restores them when switched off.",
+    "nl": "FP300: nieuwe instelling om een sensor de afstand zelf te laten melden; maakt zo nodig ruimte in de meldlijst van de sensor door standaardmeldingen van helderheid, vocht of temperatuur weg te halen, en zet die terug als je hem uitzet."
+  },
+  "0.5.25": {
+    "en": "FP300: the firmware of each sensor is shown in its settings and in the log.",
+    "nl": "FP300: de firmware van elke sensor staat in de instellingen en in de log."
+  },
+  "0.5.26": {
+    "en": "FP300: repeated start workaround for sensors that do not keep sending distances: during presence the measurement is restarted every 10 s (adjustable) and the distance is asked right after.",
+    "nl": "FP300: workaround met herhaald starten voor sensoren die na een start geen afstanden blijven sturen: tijdens aanwezigheid wordt de meting elke 10 s (instelbaar) opnieuw gestart en direct daarna de afstand opgevraagd."
+  },
+  "0.5.27": {
+    "en": "FP300: no standard reporting for temperature, humidity and light (removed once from existing sensors), presence and PIR reporting refreshed after every start, prevent leave kept on.",
+    "nl": "FP300: geen standaardrapportage voor temperatuur, vocht en licht (eenmalig weggehaald bij bestaande sensoren), aanwezigheid en PIR rapportage na elke start ververst, prevent leave blijft aan."
+  },
+  "0.5.28": {
+    "en": "FP300: set the detection range on the live strip in the app settings (gaps allowed); distance is only measured for zones, while the strip is open, or when switched on.",
+    "nl": "FP300: stel het detectiebereik in op de live strook in de app instellingen (ook met gaten); afstand wordt alleen gemeten voor zones, terwijl de strook open staat, of als je het aanzet."
+  },
+  "0.5.29": {
+    "en": "Settings always match the sensor: one table for writing, reading and reports (FP300 and FP400), every write is read back and a refused value is put back in Homey; FP300 absence delay from 1 s like Zigbee2MQTT.",
+    "nl": "Instellingen komen altijd overeen met de sensor: één tabel voor schrijven, lezen en meldingen (FP300 en FP400), elke wijziging wordt teruggelezen en een geweigerde waarde wordt in Homey teruggezet; FP300 afwezigheidsvertraging vanaf 1 s zoals Zigbee2MQTT."
+  },
+  "0.5.30": {
+    "en": "Drivers checked: settings screens are tested against the sensor tables; changing an FP300 interval or threshold switches sampling to custom automatically; clearer pairing instruction.",
+    "nl": "Drivers nagekeken: instellingenschermen worden getest tegen de sensortabellen; een FP300 interval of drempel aanpassen zet meten automatisch op eigen instelling; duidelijkere koppelinstructie."
+  },
+  "0.5.31": {
+    "en": "FP300: temperature and humidity offset and decimals, presence read after start, reporting refreshed when the sensor rejoins.",
+    "nl": "FP300: correctie en decimalen voor temperatuur en vocht, aanwezigheid uitgelezen na de start, rapportage ververst als de sensor zich opnieuw aanmeldt."
+  },
+  "0.6.0": {
+    "en": "Matter support: drivers for the FP300 and FP400 over Matter (Thread), with pairing instructions and icons. Over Matter Homey handles the sensor itself; zones and the advanced features need Zigbee.",
+    "nl": "Matter ondersteuning: drivers voor de FP300 en FP400 via Matter (Thread), met koppelinstructies en iconen. Via Matter regelt Homey de sensor zelf; zones en de uitgebreide functies werken alleen via Zigbee."
+  },
+  "0.6.1": {
+    "en": "New maintenance action 'Restore default settings' for FP300 and FP400: app settings back to defaults and the sensor's factory settings restored via the ZCL reset, without pairing again. Zones are kept.",
+    "nl": "Nieuwe onderhoudsactie 'Standaardinstellingen herstellen' voor FP300 en FP400: app instellingen terug naar standaard en de fabrieksinstellingen van de sensor hersteld via de ZCL reset, zonder opnieuw te koppelen. Zones blijven bewaard."
+  },
+  "0.6.2": {
+    "en": "FP300: separate flow cards for the PIR: 'The PIR saw movement', 'The PIR no longer sees movement' and the condition 'The PIR sees movement'.",
+    "nl": "FP300: aparte flowkaarten voor de PIR: 'De PIR zag beweging', 'De PIR ziet geen beweging meer' en de conditie 'De PIR ziet beweging'."
+  },
+  "0.6.3": {
+    "en": "FP300 battery: read after every start and every 4 hours if the sensor does not send it (firmware 0.0.0_6542), voltage used when the percentage is missing, battery level in the log.",
+    "nl": "FP300 batterij: na elke start en elke 4 uur uitgelezen als de sensor hem niet zelf stuurt (firmware 0.0.0_6542), spanning gebruikt als het percentage ontbreekt, batterijniveau in de log."
+  },
+  "0.6.7": {
+    "en": "Based on 0.6.3 (0.6.4 to 0.6.6 withdrawn). New FP300 setting 'Motion alarm also on PIR': Homey zones (rooms) become active as soon as the PIR sees movement. Automatic GitHub releases.",
+    "nl": "Gebaseerd op 0.6.3 (0.6.4 tot en met 0.6.6 teruggedraaid). Nieuwe FP300 instelling 'Bewegingsalarm ook aan bij PIR': Homey zones (kamers) worden actief zodra de PIR beweging ziet. Automatische GitHub releases."
+  },
+  "0.6.8": {
+    "en": "FP300: the motion alarm setting is now a choice 'Motion alarm on': mmWave, PIR or mmWave + PIR.",
+    "nl": "FP300: de instelling voor het bewegingsalarm is nu een keuze 'Bewegingsalarm bij': mmWave, PIR of mmWave + PIR."
+  },
+  "0.6.9": {
+    "en": "FP300 zones follow the main sensor: the motion alarm of the FP300 decides whether someone is in the room, the distance only decides which zone. When the FP300 sees nobody, every zone is off.",
+    "nl": "FP300 zones volgen de hoofdsensor: het bewegingsalarm van de FP300 bepaalt of er iemand in de kamer is, de afstand bepaalt alleen in welke zone. Ziet de FP300 niemand, dan zijn alle zones uit."
+  },
+  "0.6.10": {
+    "en": "FP300: repeated start only when the sensor is awake (no writes that arrive later as a burst), and off by default.",
+    "nl": "FP300: herhaald starten alleen als de sensor wakker is (geen opdrachten die later in een keer aankomen), en standaard uit."
+  },
+  "0.6.11": {
+    "en": "FP300: a repeated 'PIR on' while the PIR was already on is a state refresh, not new movement: no PIR flow card and no measurement restart.",
+    "nl": "FP300: een herhaalde 'PIR aan' terwijl de PIR al aan stond, is een statusverversing en geen nieuwe beweging: geen PIR flowkaart en geen herstart van de meting."
+  },
+  "0.6.12": {
+    "en": "FP300 distance settings simplified: one choice 'Measure distance' (automatic for zones, whenever someone is present, continuously, or off) plus the restart interval. Experimental options removed.",
+    "nl": "FP300 afstandsinstellingen vereenvoudigd: één keuze 'Afstand meten' (automatisch voor zones, altijd als er iemand is, continu, of uit) plus het verlenginterval. Experimentele opties weggehaald."
+  },
+  "0.6.13": {
+    "en": "FP300: the setting 'Extend the measurement every' is gone; the app keeps the distance measurement running by itself according to 'Measure distance'.",
+    "nl": "FP300: de instelling 'Meting verlengen elke' is weg; de app houdt de afstandsmeting vanzelf aan volgens 'Afstand meten'."
+  },
+  "0.6.14": {
+    "en": "FP300: the line is now called 'Progress: AI spatial learning'; it shows the result for 10 minutes and then 'Not running' instead of the last result forever.",
+    "nl": "FP300: de regel heet nu 'Voortgang: AI Ruimtelijk inleren'; hij toont de uitkomst 10 minuten en daarna 'Niet bezig', in plaats van voor altijd de laatste uitkomst."
+  },
+  "0.6.15": {
+    "en": "FP300: the learning line shows just 'Not running'; how to start is in the explanation behind the i.",
+    "nl": "FP300: de leerregel toont alleen 'Niet bezig'; hoe je start staat in de uitleg achter de i."
+  },
+  "0.6.16": {
+    "en": "FP300: the name of the motion alarm on the device shows what the sensor sees: Motion, Motion: mmWave, Motion: PIR or Motion: mmWave + PIR.",
+    "nl": "FP300: de naam van het bewegingsalarm op het apparaat laat zien wat de sensor ziet: Beweging, Beweging: mmWave, Beweging: PIR of Beweging: mmWave + PIR."
+  },
+  "0.6.17": {
+    "en": "FP300: the motion alarm name now tells PIR and mmWave apart; the PIR counts for 10 s after a real new detection (the sensor keeps its PIR state on until absence).",
+    "nl": "FP300: de naam van het bewegingsalarm maakt nu onderscheid tussen PIR en mmWave; de PIR telt 10 s na een echte nieuwe detectie (de sensor houdt zijn PIR status aan tot afwezigheid)."
+  },
+  "0.6.18": {
+    "en": "FP300: the motion alarm name follows the sensor literally: PIR while the PIR is on, mmWave while presence is on, both when both are on, and it changes as soon as one reports off.",
+    "nl": "FP300: de naam van het bewegingsalarm volgt de sensor letterlijk: PIR zolang de PIR aan is, mmWave zolang de aanwezigheid aan is, beide als beide aan zijn, en hij wisselt zodra een van beide uit meldt."
+  },
+  "0.6.19": {
+    "en": "Documentation and comments tidied up.",
+    "nl": "Documentatie en commentaar opgeschoond."
+  }
+}

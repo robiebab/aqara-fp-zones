@@ -1,0 +1,459 @@
+<div class="fp" id="fp">
+  <h2 data-t="title"></h2>
+  <p data-t="intro"></p>
+
+  <div id="sensors"></div>
+
+  <div id="editor" hidden>
+    <div class="fp-seg fp-seg-strong" id="modes" role="tablist">
+      <button data-mode="zones" data-t="mode_zones"></button>
+      <button data-mode="ignore" data-t="mode_ignore"></button>
+      <button data-mode="outside" data-t="mode_outside"></button>
+      <button data-mode="range" data-t="mode_range"></button>
+    </div>
+    <p class="fp-note" id="modeHint" style="margin-top:10px"></p>
+
+    <div id="zonesBox">
+      <div class="fp-zonelist" id="zones"></div>
+    </div>
+
+    <div id="form" hidden class="fp-panel">
+      <div class="fp-field">
+        <label for="name" data-t="name"></label>
+        <input class="fp-input" id="name" maxlength="32" autocomplete="off">
+      </div>
+      <div class="fp-field" style="margin-bottom:0">
+        <label data-t="empty_after"></label>
+        <div class="fp-seg" id="timeouts"></div>
+        <div class="fp-custom" id="customField" hidden>
+          <label for="customSeconds" data-t="custom_label"></label>
+          <div class="fp-custom-row"><input class="fp-input num" id="customSeconds" type="number"><span data-t="seconds"></span></div>
+          <p class="fp-error" id="customError" hidden></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- toolbar: everything you need while painting sits right above the map -->
+    <div class="fp-toolbar">
+      <div class="fp-toolbar-row">
+        <span class="num fp-count" id="cellInfo"></span>
+        <button class="fp-link" id="clear" data-t="clear"></button>
+      </div>
+      <div class="fp-toolbar-row" id="zoneActions" hidden>
+        <button class="fp-btn danger small" id="remove" data-t="remove"></button>
+        <button class="fp-btn primary small" id="save" data-t="save"></button>
+      </div>
+      <div class="fp-toolbar-row" id="areaActions" hidden>
+        <button class="fp-btn ghost small" id="areaReset" data-t="area_reset"></button>
+        <button class="fp-btn primary small" id="areaSave" data-t="area_save"></button>
+      </div>
+    </div>
+
+    <div class="fp-map-wrap">
+      <canvas class="fp-map" id="map"></canvas>
+      <canvas class="fp-map" id="row" hidden></canvas>
+      <div class="fp-overlay top">
+        <span class="fp-pill fp-live" id="live"><i></i><span id="liveText"></span></span>
+        <button class="fp-pill" id="mirror" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M9 7 4 12l5 5V7z"/><path d="M15 7l5 5-5 5V7z"/></svg>
+          <span data-t="mirror_short"></span>
+        </button>
+      </div>
+      <div class="fp-target" id="targetPanel" hidden>
+        <strong id="targetTitle"></strong>
+        <p class="fp-note" data-t="target_text"></p>
+        <div class="fp-tools">
+          <button class="fp-chip" id="forget" data-t="forget"></button>
+          <button class="fp-chip" id="ignoreHere" data-t="ignore_here"></button>
+          <button class="fp-link" id="targetClose" data-t="close"></button>
+        </div>
+      </div>
+    </div>
+
+    <p class="fp-note" id="formHint" style="margin-top:12px"></p>
+    <p class="fp-note" id="areaHint" style="margin-top:12px" hidden></p>
+    <p class="fp-note" style="margin-top:6px" data-t="add_hint"></p>
+  </div>
+
+  <div class="fp-field" style="margin-top:22px">
+    <label data-t="theme"></label>
+    <div class="fp-seg" id="themeChoice">
+      <button data-theme="auto" data-t="theme_auto"></button>
+      <button data-theme="light" data-t="theme_light"></button>
+      <button data-theme="dark" data-t="theme_dark"></button>
+    </div>
+    <p class="fp-note" style="margin-top:8px" data-t="theme_hint"></p>
+  </div>
+</div>
+
+<script>
+function onHomeyReady(Homey) {
+  var $ = function (id) { return document.getElementById(id); };
+  var t = function (key, tokens) { return Homey.__('editor.' + key, tokens); };
+  var m = function (v) { return String(Math.round(v * 100) / 100).replace('.', ','); };
+
+  // iOS only shows :active styles when the page listens to touches
+  document.addEventListener('touchstart', function () {}, { passive: true });
+  var themePref = 'auto', themeLogged = false;
+  var rerunTheme = fpWatchTheme(function () { return themePref; }, function (info) {
+    if (typeof map !== 'undefined' && map) map.render();
+    if (!themeLogged) {
+      themeLogged = true;
+      setTimeout(function () { Homey.api('POST', '/debug/theme', fpTheme(themePref), function () {}); }, 1200);
+    }
+  });
+  function renderThemeChoice() {
+    document.querySelectorAll('#themeChoice button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.theme === themePref)); });
+  }
+  Homey.get('theme', function (err, v) { themePref = (!err && v) || 'auto'; renderThemeChoice(); rerunTheme(); });
+  document.querySelectorAll('#themeChoice button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      themePref = b.dataset.theme; renderThemeChoice(); rerunTheme();
+      Homey.set('theme', themePref, function () {});
+    });
+  });
+
+  var toastEl = document.createElement('div');
+  toastEl.className = 'fp-toast';
+  toastEl.setAttribute('role', 'status');
+  document.body.appendChild(toastEl);
+  var toastTimer = null;
+  function toast(msg, isError) {
+    toastEl.textContent = msg;
+    toastEl.classList.toggle('error', !!isError);
+    toastEl.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, isError ? 4000 : 2200);
+  }
+  function fail(err) { toast(err && err.message ? err.message : String(err), true); }
+
+  // Spinner on the button while the request runs; the button cannot be tapped twice.
+  function busy(btn, promise) {
+    btn.classList.add('busy'); btn.disabled = true;
+    function done() { btn.classList.remove('busy'); btn.disabled = false; }
+    return promise.then(function (r) { done(); return r; }, function (e) { done(); throw e; });
+  }
+  document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
+
+  var token = null, live = { zones: {}, zoneStates: {}, targets: [], areas: { ignore: [], outside: [] } }, selected = null, edit = null, timer = null;
+  var mode = 'zones', areaDraft = null, areaDirty = false, tapped = null;
+
+  // Painting is only possible on an existing zone or on an area. New zones are made via Add device.
+  var mapOptions = {
+    paint: false,
+    onChange: function (cells) {
+      if (mode !== 'zones') { areaDraft = cells; areaDirty = true; renderCellInfo(); renderAreaForm(); return; }
+      if (!edit) return;
+      edit.cells = cells;
+      renderCellInfo(); renderForm();
+    },
+    onTargetTap: function (t) { tapped = t; renderTarget(); },
+  };
+  var mapEditor = new FpMap($('map'), mapOptions);   // FP400: grid of 0.5 m cells
+  var rowEditor = new FpRow($('row'), {
+    paint: false,
+    onChange: mapOptions.onChange,
+    topPad: 46, // room for the Live label on top of the strip
+    // all 24 blocks fit in the screen below the sticky toolbar
+    fitHeight: function () {
+      var bar = document.querySelector('.fp-toolbar');
+      return window.innerHeight - (bar ? bar.offsetHeight : 90) - 24;
+    },
+  });   // FP300: strip of 0.25 m distance blocks
+  var map = mapEditor, kind = 'fp400', sensorList = [];
+  // the toolbar grows when a zone is chosen: re-fit the strip so all 6 m stay on screen
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () { if (kind === 'fp300') rowEditor.resize(); }).observe(document.querySelector('.fp-toolbar'));
+  }
+  function useEditor(k) {
+    kind = k || 'fp400';
+    map = kind === 'fp300' ? rowEditor : mapEditor;
+    $('map').hidden = kind === 'fp300';
+    $('row').hidden = kind !== 'fp300';
+    // FP400: zones, ignore spots, outside room. FP300: zones and its own detection range.
+    document.querySelectorAll('#modes button').forEach(function (b) {
+      var m = b.dataset.mode;
+      b.hidden = kind === 'fp300' ? (m === 'ignore' || m === 'outside') : m === 'range';
+    });
+    $('modes').hidden = false;
+    $('modeHint').hidden = false;
+    $('mirror').hidden = kind === 'fp300';
+    if (kind === 'fp300') { tapped = null; renderTarget(); }
+  }
+  function updatePaint() {
+    mapOptions.paint = mode !== 'zones' || !!edit;
+    if (rowEditor) rowEditor.setPaint(mode === 'range' || !!edit);
+  }
+
+  /* ---------- modes: zones, ignore spots, outside the room */
+  document.querySelectorAll('#modes button').forEach(function (b) {
+    b.addEventListener('click', function () { setMode(b.dataset.mode); });
+  });
+  function setMode(m, cells) {
+    mode = m;
+    document.querySelectorAll('#modes button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.mode === m)); });
+    $('modeHint').textContent = t('hint_' + m);
+    $('zonesBox').hidden = m !== 'zones';
+    $('form').hidden = m !== 'zones' || !edit;
+    $('zoneActions').hidden = $('form').hidden;
+    $('formHint').hidden = m !== 'zones';
+    if (m === 'zones') {
+      areaDraft = null; areaDirty = false;
+      map.edit(selected, edit ? edit.cells : []);
+    } else if (m === 'range') {
+      // FP300 detection range: the blocks in which the sensor itself detects presence
+      areaDraft = cells || (live.rangeBlocks || []).slice();
+      areaDirty = !!cells;
+      map.edit('range', areaDraft);
+    } else {
+      areaDraft = cells || (live.areas[m] || []).slice();
+      areaDirty = !!cells;
+      map.edit('area:' + m, areaDraft);
+    }
+    renderCellInfo(); renderAreaForm();
+  }
+  function renderAreaForm() {
+    $('areaActions').hidden = mode === 'zones';
+    $('areaHint').hidden = mode === 'zones';
+    if (mode === 'zones') return;
+    $('areaHint').textContent = areaDirty ? t('area_unsaved') : t('area_saved');
+    $('areaSave').disabled = !areaDirty;
+    $('areaReset').hidden = !areaDirty;
+  }
+  $('areaReset').addEventListener('click', function () { setMode(mode); });
+  $('areaSave').addEventListener('click', function () {
+    var type = mode;
+    if (type === 'range') {
+      busy($('areaSave'), api('PUT', '/fp400/' + encodeURIComponent(token) + '/range', { blocks: areaDraft }))
+        .then(function (res) { live.rangeBlocks = res.blocks; areaDirty = false; renderAreaForm(); toast(res.message || t('toast_area_saved')); })
+        .catch(function (err) { fail(err); renderAreaForm(); });
+      return;
+    }
+    busy($('areaSave'), api('PUT', '/fp400/' + encodeURIComponent(token) + '/areas/' + type, { cells: areaDraft }))
+      .then(function (areas) { live.areas = areas; areaDirty = false; map.setData(live); renderAreaForm(); toast(t('toast_area_saved')); })
+      .catch(function (err) { fail(err); renderAreaForm(); });
+  });
+
+  /* ---------- a tapped dot: forget it, or turn its spot into an ignore spot */
+  function renderTarget() {
+    $('targetPanel').hidden = !tapped;
+    if (!tapped) return;
+    $('targetTitle').textContent = t('target_title', { id: tapped.id, distance: (Math.hypot(tapped.x, tapped.y) / 100).toFixed(1).replace('.', ',') });
+  }
+  $('targetClose').addEventListener('click', function () { tapped = null; renderTarget(); });
+  $('forget').addEventListener('click', function () {
+    var id = tapped.id;
+    busy($('forget'), api('POST', '/fp400/' + encodeURIComponent(token) + '/targets/' + id + '/forget', {}))
+      .then(function () { tapped = null; renderTarget(); refresh(); toast(t('toast_forgotten', { id: id })); })
+      .catch(fail);
+  });
+  $('ignoreHere').addEventListener('click', function () {
+    var around = map.cellsAround(tapped);
+    var base = mode === 'ignore' && areaDraft ? areaDraft : (live.areas.ignore || []);
+    var merged = Array.from(new Set(base.concat(around))).sort(function (a, b) { return a - b; });
+    tapped = null; renderTarget();
+    setMode('ignore', merged);
+    toast(t('toast_ignore_added'));
+  });
+  function setMirror(on) {
+    map.mirror = on; map.render();
+    $('mirror').setAttribute('aria-pressed', String(on));
+  }
+  Homey.get('mirror', function (err, v) { setMirror(!err && v === true); });
+  $('mirror').addEventListener('click', function () {
+    var on = !map.mirror;
+    setMirror(on);
+    Homey.set('mirror', on, function () {});
+    toast(on ? t('toast_mirror_on') : t('toast_mirror_off'));
+  });
+  $('clear').addEventListener('click', function () { map.clear(); toast(t('toast_cleared')); });
+
+  function api(method, path, body) {
+    return new Promise(function (resolve, reject) {
+      Homey.api(method, path, body, function (err, res) { if (err) reject(err); else resolve(res); });
+    });
+  }
+
+  function renderSensors(list) {
+    sensorList = list;
+    var box = $('sensors');
+    box.innerHTML = '';
+    if (!list.length) { box.innerHTML = '<div class="fp-empty">' + t('no_sensor') + '</div>'; return; }
+    if (list.length === 1) { choose(list[0].token); return; }
+    list.forEach(function (s) {
+      var b = document.createElement('button');
+      b.className = 'fp-choice';
+      b.innerHTML = '<span><strong></strong><small></small></span>';
+      b.querySelector('strong').textContent = s.name;
+      b.querySelector('small').textContent = s.kind === 'fp300' ? 'FP300' : 'FP400';
+      b.addEventListener('click', function () {
+        box.querySelectorAll('.fp-choice').forEach(function (x) { x.setAttribute('aria-pressed', 'false'); });
+        b.setAttribute('aria-pressed', 'true');
+        choose(s.token);
+      });
+      box.appendChild(b);
+    });
+  }
+
+  function choose(tk) {
+    token = tk; selected = null; edit = null;
+    var found = sensorList.filter(function (x) { return x.token === tk; })[0];
+    useEditor(found && found.kind);
+    map.edit(null, []);
+    $('editor').hidden = false;
+    setTimeout(function () { map.resize(); }, 0);
+    if (timer) clearInterval(timer);
+    refresh(); timer = setInterval(refresh, 1000);
+    setMode('zones');
+    renderForm();
+    // the sensor is the source of truth for its own areas (the Aqara app can change them too)
+    if (kind === 'fp300') return;
+    api('GET', '/fp400/' + encodeURIComponent(token) + '/areas').then(function (areas) {
+      live.areas = areas; map.setData(live);
+      if (mode !== 'zones' && !areaDirty) setMode(mode);
+    }).catch(function () {});
+  }
+
+  function refresh() {
+    // nothing to update while the page is not visible (other app or tab in front)
+    if (!token || document.hidden) return Promise.resolve();
+    return api('GET', '/fp400/' + encodeURIComponent(token)).then(function (res) {
+      live = res;
+      if (!live.areas) live.areas = { ignore: [], outside: [] };
+      if (!live.targets) live.targets = [];
+      map.setData(res);
+      if (res.kind === 'fp300') {
+        var known = res.presence && res.block !== null && res.block !== undefined;
+        $('live').classList.toggle('on', !!known);
+        $('liveText').textContent = known
+          ? t('live_fp300', { distance: m(res.distance), age: res.distanceAge === null ? '?' : res.distanceAge })
+          : res.pirOnly ? t('live_fp300_pir')
+          : res.tracking === 'waiting' ? t('live_fp300_waiting')
+          : t(res.presence ? 'live_fp300_far' : 'live_fp300_off');
+        renderZones();
+        return;
+      }
+      if (tapped) {
+        var still = res.targets.filter(function (x) { return x.id === tapped.id; })[0];
+        if (still) { tapped = still; renderTarget(); }
+      }
+      $('live').classList.toggle('on', res.fresh);
+      $('liveText').textContent = res.fresh ? t('live_on', { count: res.targets.length }) : t('live_off');
+      renderZones();
+    }).catch(function (err) { $('liveText').textContent = err.message || String(err); });
+  }
+
+  function renderZones() {
+    var box = $('zones');
+    var ids = Object.keys(live.zones);
+    box.innerHTML = '';
+    ids.forEach(function (id) {
+      var z = live.zones[id], st = live.zoneStates[id] || {};
+      var row = document.createElement('button');
+      row.className = 'fp-zonerow';
+      row.setAttribute('aria-pressed', String(String(selected) === id));
+      row.innerHTML = '<i></i><span></span><small></small>';
+      row.querySelector('i').style.background = FP_ZONE_COLORS[(id - 1) % 8];
+      row.querySelector('span').textContent = z.name;
+      row.querySelector('small').textContent = st.available ? (st.occupied ? t('occupied', { count: st.count }) : t('empty')) : t('unknown');
+      row.addEventListener('click', function () { select(id); });
+      box.appendChild(row);
+    });
+    if (!ids.length && selected === null) box.innerHTML = '<div class="fp-empty">' + t('no_zones') + '</div>';
+  }
+
+  function select(id) {
+    selected = id;
+    disarm();
+    edit = JSON.parse(JSON.stringify(live.zones[id]));
+    // FP300 zones store "blocks"; edit them as "cells" so both sensors share one form
+    if (!edit.cells && edit.blocks) edit.cells = edit.blocks;
+    delete edit.blocks;
+    map.edit(id, edit.cells);
+    renderZones(); renderCellInfo(); renderForm();
+  }
+
+  function renderCellInfo() {
+    updatePaint();
+    if (kind === 'fp300' && mode === 'range') {
+      var rb = fpBlockInfo(areaDraft || []);
+      $('cellInfo').textContent = rb.count ? t('range_info', { from: m(rb.from), to: m(rb.to), count: rb.count }) : t('range_none');
+      $('clear').hidden = !rb.count;
+      return;
+    }
+    if (kind === 'fp300') {
+      var bl = edit && edit.cells ? edit.cells : [];
+      var bi = fpBlockInfo(bl);
+      $('cellInfo').textContent = !edit ? t('pick') : bi.count ? t(bi.count === 1 ? 'blocks_one' : 'blocks', { count: bi.count, from: m(bi.from), to: m(bi.to) }) : t('cells_none');
+      $('clear').hidden = !bi.count;
+      return;
+    }
+    if (mode !== 'zones') {
+      var a = fpCellInfo(areaDraft || []);
+      $('cellInfo').textContent = a.count ? t(a.count === 1 ? 'cells_one' : 'cells', { count: a.count, area: m(a.area) }) : t('cells_none');
+      $('clear').hidden = !a.count;
+      return;
+    }
+    var cells = edit && edit.cells ? edit.cells : [];
+    var info = fpCellInfo(cells);
+    $('cellInfo').textContent = !edit ? t('pick') : info.count ? t(info.count === 1 ? 'cells_one' : 'cells', { count: info.count, area: m(info.area) }) : t('cells_none');
+    $('clear').hidden = !info.count;
+  }
+
+  function renderForm() {
+    $('form').hidden = !edit || mode !== 'zones';
+    $('zoneActions').hidden = $('form').hidden;
+    if (!edit) { $('formHint').textContent = ''; return; }
+    if (document.activeElement !== $('name')) $('name').value = edit.name || '';
+    var linkedName = edit.uid && live.linked ? live.linked[edit.uid] : null;
+    // A zone with a device is removed by deleting that device in Homey; only loose zones can be removed here.
+    $('remove').hidden = !!linkedName;
+    $('formHint').textContent = linkedName ? t('linked_hint', { name: linkedName }) : t('loose_hint');
+    timeoutPicker.set(edit.absence_timeout);
+  }
+  var timeoutPicker = new FpTimeoutPicker($('timeouts'), $('customField'), $('customSeconds'), $('customError'),
+    { custom: t('custom'), invalid: t('custom_invalid') },
+    function (seconds) { if (edit) edit.absence_timeout = seconds; });
+  $('name').addEventListener('input', function () { if (edit) edit.name = this.value; });
+
+  $('save').addEventListener('click', function () {
+    if (!edit || !String(edit.name || '').trim()) return toast(t('need_name'), true);
+    if (edit.absence_timeout === null) return toast(t('custom_invalid'), true);
+    if (!edit.cells || !edit.cells.length) return toast(t('need_cells'), true);
+    var slot = selected;
+    busy($('save'), api('PUT', '/fp400/' + encodeURIComponent(token) + '/zones/' + slot, edit))
+      .then(function () { return refresh(); })
+      .then(function () { select(String(slot)); toast(t('toast_zone_saved')); })
+      .catch(fail);
+  });
+
+  // Two taps instead of Homey.confirm: works the same on every Homey version and keeps the user on the page.
+  var armTimer = null;
+  function disarm() {
+    if (armTimer) clearTimeout(armTimer);
+    armTimer = null;
+    $('remove').textContent = t('remove');
+    $('remove').classList.remove('armed');
+  }
+  $('remove').addEventListener('click', function () {
+    if (!armTimer) {
+      $('remove').textContent = t('remove_confirm');
+      $('remove').classList.add('armed');
+      armTimer = setTimeout(disarm, 4000);
+      return;
+    }
+    disarm();
+    var slot = selected;
+    busy($('remove'), api('DELETE', '/fp400/' + encodeURIComponent(token) + '/zones/' + slot)).then(function () {
+      selected = null; edit = null;
+      map.edit(null, []);
+      renderForm(); renderCellInfo();
+      toast(t('toast_zone_removed'));
+      return refresh();
+    }).catch(fail);
+  });
+
+  api('GET', '/fp400').then(function (list) { Homey.ready(); renderSensors(list); })
+    .catch(function (err) { Homey.ready(); Homey.alert(err.message || String(err)); });
+}
+</script>

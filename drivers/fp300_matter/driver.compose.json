@@ -1,0 +1,42 @@
+{
+  "name": {
+    "en": "FP300 via Matter",
+    "nl": "FP300 via Matter"
+  },
+  "class": "sensor",
+  "capabilities": [
+    "alarm_motion",
+    "measure_temperature",
+    "measure_humidity",
+    "measure_luminance",
+    "measure_battery"
+  ],
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "matter"
+  ],
+  "energy": {
+    "batteries": [
+      "CR2450",
+      "CR2450"
+    ]
+  },
+  "images": {
+    "small": "{{driverAssetsPath}}/images/small.png",
+    "large": "{{driverAssetsPath}}/images/large.png",
+    "xlarge": "{{driverAssetsPath}}/images/xlarge.png"
+  },
+  "matter": {
+    "vendorId": 4447,
+    "productId": 8197,
+    "learnmode": {
+      "image": "{{driverAssetsPath}}/learn.svg",
+      "instruction": {
+        "en": "For an FP300 set to Matter (Thread) in the Aqara Home app. Hold the reset button for more than 5 seconds until the blue light flashes three times, then scan the Matter code on the sensor. Note: via Matter, Homey handles the sensor itself; zones, distance and the FP300 settings of this app are only available when the FP300 uses Zigbee.",
+        "nl": "Voor een FP300 die in de Aqara Home app op Matter (Thread) staat. Houd de resetknop langer dan 5 seconden ingedrukt tot het blauwe lampje drie keer knippert, en scan daarna de Matter code op de sensor. Let op: via Matter regelt Homey de sensor zelf; zones, afstand en de FP300 instellingen van deze app zijn er alleen als de FP300 op Zigbee staat."
+      }
+    }
+  }
+}

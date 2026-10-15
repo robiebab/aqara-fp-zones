@@ -1,0 +1,97 @@
+{
+  "triggers": [
+    {
+      "id": "movement_event",
+      "title": {
+        "en": "Movement event...",
+        "nl": "Bewegingsgebeurtenis..."
+      },
+      "titleFormatted": {
+        "en": "Movement event [[event]]",
+        "nl": "Bewegingsgebeurtenis [[event]]"
+      },
+      "args": [
+        {
+          "name": "event",
+          "type": "dropdown",
+          "values": [
+            {
+              "id": "enter",
+              "label": {
+                "en": "someone enters the room",
+                "nl": "iemand komt de kamer in"
+              }
+            },
+            {
+              "id": "leave",
+              "label": {
+                "en": "someone leaves the room",
+                "nl": "iemand verlaat de kamer"
+              }
+            },
+            {
+              "id": "approach",
+              "label": {
+                "en": "someone approaches",
+                "nl": "iemand komt dichterbij"
+              }
+            },
+            {
+              "id": "away",
+              "label": {
+                "en": "someone walks away",
+                "nl": "iemand loopt weg"
+              }
+            },
+            {
+              "id": "left_in",
+              "label": {
+                "en": "in from the left",
+                "nl": "binnen vanaf links"
+              }
+            },
+            {
+              "id": "left_out",
+              "label": {
+                "en": "out to the left",
+                "nl": "naar links weg"
+              }
+            },
+            {
+              "id": "right_in",
+              "label": {
+                "en": "in from the right",
+                "nl": "binnen vanaf rechts"
+              }
+            },
+            {
+              "id": "right_out",
+              "label": {
+                "en": "out to the right",
+                "nl": "naar rechts weg"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fp400_learning_done",
+      "title": {
+        "nl": "AI ruimtelijk leren is klaar",
+        "en": "AI spatial learning finished"
+      },
+      "tokens": [
+        {
+          "name": "success",
+          "type": "boolean",
+          "title": {
+            "nl": "gelukt",
+            "en": "succeeded"
+          },
+          "example": true
+        }
+      ]
+    }
+  ]
+}

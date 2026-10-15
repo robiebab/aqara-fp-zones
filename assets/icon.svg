@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960" fill="none" stroke="#000" stroke-width="40" stroke-linecap="round" stroke-linejoin="round">
+  <!-- radar field opening upward from the sensor -->
+  <path d="M480 820 L190 318"/>
+  <path d="M480 820 L770 318"/>
+  <path d="M190 318 A580 580 0 0 1 770 318"/>
+  <!-- zone with a person -->
+  <rect x="352" y="380" width="256" height="224" rx="36"/>
+  <circle cx="480" cy="460" r="34"/>
+  <path d="M424 556 q56 -56 112 0"/>
+  <circle cx="480" cy="820" r="30" fill="#000" stroke="none"/>
+</svg>

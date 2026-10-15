@@ -1,0 +1,210 @@
+:root {
+  --paper: #ffffff;
+  --floor: #f2f5f8;
+  --ink: #17212b;
+  --muted: #5b6b7a;
+  --line: #dce3ea;
+  --radar: #0f7c8c;
+  --radar-soft: #e3f2f3;
+  --target: #f26b1d;
+  --danger: #c2352b;
+  --on-radar: #ffffff;
+  --radius-l: 18px;
+  --radius-s: 10px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+/* Dark colours follow Homey's own page, not the phone setting: fpTheme() in the script sets data-theme
+   from the background Homey actually draws, so the view always blends in. */
+:root[data-theme="dark"] {
+  --paper: #12181f;
+  --floor: #1f2730;
+  --ink: #eef2f6;
+  --muted: #9aa8b5;
+  --line: #2f3a46;
+  --radar: #3fb6c4;
+  --radar-soft: #16343a;
+  --on-radar: #08262b;
+}
+.fp { font-family: var(--font); color: var(--ink); background: transparent; font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+.fp * { box-sizing: border-box; }
+.fp h2 { font-size: 22px; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 6px; }
+.fp p { margin: 0 0 12px; color: var(--muted); max-width: 60ch; }
+.fp .num { font-variant-numeric: tabular-nums; }
+
+/* progress: a real sequence, so it is numbered */
+.fp-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0 18px; }
+.fp-steps span { height: 4px; border-radius: 4px; background: var(--line); transition: background .25s; }
+.fp-steps span.done { background: var(--radar); }
+.fp-step-label { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+
+/* sensor choice */
+.fp-choice { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px; margin-bottom: 10px; background: var(--paper); color: var(--ink);
+  border: 1.5px solid var(--line); border-radius: var(--radius-l); text-align: left; font: inherit; cursor: pointer; }
+.fp-choice[aria-pressed="true"] { border-color: var(--radar); background: var(--radar-soft); }
+.fp-choice svg { flex: 0 0 40px; height: 40px; }
+.fp-choice strong { display: block; font-weight: 600; }
+.fp-choice small { color: var(--muted); font-size: 13px; }
+
+/* map */
+.fp-map-wrap { position: relative; border-radius: var(--radius-l); overflow: hidden; background: var(--floor); }
+.fp-map { display: block; width: 100%; touch-action: none; cursor: crosshair; }
+.fp-map-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 10px 2px 0; font-size: 13px; color: var(--muted); }
+.fp-live { display: inline-flex; align-items: center; gap: 6px; }
+.fp-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.fp-live.on i { background: var(--target); animation: fp-pulse 1.6s ease-out infinite; }
+@keyframes fp-pulse { 0% { box-shadow: 0 0 0 0 rgba(242,107,29,.5); } 100% { box-shadow: 0 0 0 8px rgba(242,107,29,0); } }
+@media (prefers-reduced-motion: reduce) { .fp-live.on i { animation: none; } .fp-steps span { transition: none; } }
+
+/* switch */
+.fp-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.fp-switch input { appearance: none; -webkit-appearance: none; width: 34px; height: 20px; border-radius: 20px; background: var(--line); position: relative; margin: 0; cursor: pointer; transition: background .2s; }
+.fp-switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s; }
+.fp-switch input:checked { background: var(--radar); }
+.fp-switch input:checked::after { transform: translateX(14px); }
+
+/* form */
+.fp-field { margin: 0 0 18px; }
+.fp-field label { display: block; font-weight: 600; margin-bottom: 8px; }
+.fp-input { width: 100%; font: inherit; font-size: 17px; padding: 12px 14px; border-radius: var(--radius-s); border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); }
+.fp-input:focus { outline: none; border-color: var(--radar); }
+.fp-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.fp-chip { font: inherit; font-size: 14px; padding: 7px 12px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; }
+.fp .fp-chip[aria-pressed="true"] { border-color: var(--radar) !important; background: var(--radar-soft) !important; color: var(--ink) !important; }
+/* segmented control. Homey loads its own stylesheet on these pages that also styles buttons,
+   so the states here are forced, otherwise the chosen option is not visible. */
+.fp .fp-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px;
+  background: var(--floor); border: 1.5px solid var(--line); border-radius: 14px; }
+.fp .fp-seg > button { -webkit-appearance: none !important; appearance: none !important; margin: 0 !important;
+  border: 0 !important; border-radius: 10px !important; box-shadow: none !important; min-height: 0 !important;
+  background: transparent !important; color: var(--muted) !important; font: 600 14px var(--font) !important;
+  padding: 10px 4px !important; line-height: 1.2 !important; cursor: pointer; }
+.fp .fp-seg > button[aria-pressed="true"] { background: var(--radar) !important; color: var(--on-radar) !important;
+  box-shadow: 0 2px 6px rgba(15, 124, 140, .35) !important; }
+.fp .fp-seg > button:active:not([aria-pressed="true"]) { background: var(--radar-soft) !important; color: var(--ink) !important; }
+.fp .fp-seg-strong > button { padding: 12px 4px !important; font-size: 15px !important; }
+
+/* summary */
+.fp-summary { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; padding: 16px; border: 1.5px solid var(--line); border-radius: var(--radius-l); margin-top: 14px; }
+.fp-summary dt { color: var(--muted); }
+.fp-summary dd { margin: 0; font-weight: 600; text-align: right; }
+
+/* action bar */
+.fp-actions { position: sticky; bottom: 0; display: flex; gap: 10px; padding: 14px 0 6px; background: linear-gradient(to top, var(--paper) 70%, transparent); margin-top: 18px; }
+.fp-btn { font: inherit; font-weight: 600; font-size: 16px; padding: 14px 18px; border-radius: 14px; border: 0; cursor: pointer; }
+.fp-btn.primary { flex: 1; background: var(--radar); color: var(--on-radar); }
+.fp-btn.primary:disabled { opacity: .35; cursor: default; }
+.fp-btn.ghost { background: transparent; color: var(--ink); }
+.fp-btn.danger { background: transparent; color: var(--danger); }
+.fp :focus-visible { outline: 3px solid var(--radar); outline-offset: 2px; }
+
+.fp-note { font-size: 13px; color: var(--muted); }
+.fp-empty { padding: 28px 18px; text-align: center; border: 1.5px dashed var(--line); border-radius: var(--radius-l); color: var(--muted); }
+.fp-zonelist { display: grid; gap: 8px; margin-top: 14px; }
+.fp-zonerow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: var(--radius-s); background: var(--paper); color: var(--ink); font: inherit; text-align: left; cursor: pointer; width: 100%; }
+.fp .fp-zonerow[aria-pressed="true"] { border-color: var(--radar) !important; background: var(--radar-soft) !important; }
+.fp-zonerow i { width: 12px; height: 12px; border-radius: 3px; flex: 0 0 12px; }
+.fp-zonerow span { flex: 1; }
+.fp-zonerow small { color: var(--muted); }
+[hidden] { display: none !important; }
+.fp-actions.static { position: static; background: none; padding-top: 6px; }
+.fp-btn.danger.armed { background: var(--danger); color: #fff; }
+.fp-link { font: inherit; font-size: 13px; font-weight: 600; color: var(--radar); background: none; border: 0; padding: 4px 0; cursor: pointer; }
+.fp-tools { display: flex; gap: 8px; margin-top: 12px; }
+.fp-target { margin-top: 14px; padding: 14px; border: 1.5px solid var(--target); border-radius: var(--radius-l); }
+.fp-target strong { display: block; margin-bottom: 4px; }
+.fp-target .fp-tools { flex-wrap: wrap; align-items: center; margin-top: 4px; }
+
+/* press feedback: every button visibly reacts to a tap */
+.fp button { -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  transition: transform .08s ease, background-color .15s ease, filter .15s ease, opacity .15s ease; }
+.fp button:active:not(:disabled) { transform: scale(0.96); }
+.fp-btn.primary:active:not(:disabled), .fp-btn.danger.armed:active { filter: brightness(0.85); }
+.fp-btn.ghost:active:not(:disabled), .fp-btn.danger:active:not(:disabled) { background: var(--floor); }
+.fp-chip:active:not(:disabled), .fp-zonerow:active, .fp-choice:active, .fp-seg button:active:not([aria-pressed="true"]) { background: var(--radar-soft); }
+.fp-link:active { opacity: .55; }
+
+/* busy: the button shows a spinner while the sensor is being asked */
+.fp button.busy { position: relative; color: transparent !important; pointer-events: none; }
+.fp button.busy::after { content: ""; position: absolute; inset: 0; margin: auto; width: 18px; height: 18px; border-radius: 50%;
+  border: 2.5px solid var(--spin, var(--ink)); border-right-color: transparent; animation: fp-spin .7s linear infinite; }
+.fp-btn.primary.busy { --spin: var(--on-radar); }
+.fp-btn.danger.busy { --spin: var(--danger); }
+@keyframes fp-spin { to { transform: rotate(360deg); } }
+
+/* toast: short confirmation after an action */
+.fp-toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 10;
+  transform: translate(-50%, 16px); opacity: 0; pointer-events: none; max-width: calc(100% - 32px);
+  background: var(--ink); color: var(--paper); font: 600 14px var(--font); padding: 10px 16px; border-radius: 999px;
+  width: max-content; text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .18); transition: opacity .2s ease, transform .2s ease; }
+.fp-toast.show { opacity: 1; transform: translate(-50%, 0); }
+.fp-toast.error { background: var(--danger); color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  .fp button, .fp-toast { transition: none; }
+  .fp button:active:not(:disabled) { transform: none; }
+  .fp button.busy::after { animation-duration: 2s; }
+}
+.fp-btn.busy:disabled { opacity: 1; }
+
+/* panel and toolbar above the map */
+.fp-panel { margin-top: 16px; padding: 16px; border: 1.5px solid var(--line); border-radius: var(--radius-l); }
+.fp-toolbar { position: sticky; top: 0; z-index: 3; margin-top: 16px; padding: 10px 12px; display: grid; gap: 10px;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: var(--radius-l) var(--radius-l) 0 0; border-bottom: 0; }
+.fp-toolbar-row { display: flex; align-items: center; gap: 10px; }
+.fp-toolbar-row .fp-count { flex: 1; font-size: 14px; color: var(--muted); }
+.fp-toolbar-row .fp-btn.small { padding: 11px 14px; font-size: 15px; border-radius: 12px; }
+.fp-toolbar-row .fp-btn.primary.small { flex: 1; }
+.fp-toolbar + .fp-map-wrap { border-radius: 0 0 var(--radius-l) var(--radius-l); border: 1.5px solid var(--line); border-top: 0; }
+
+/* overlays on the map */
+.fp-overlay { position: absolute; left: 8px; right: 8px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.fp-overlay.top { top: 8px; }
+.fp-pill { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--paper) 88%, transparent); border: 1px solid var(--line); color: var(--ink);
+  font: 600 12px var(--font); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+button.fp-pill { cursor: pointer; -webkit-appearance: none; appearance: none; }
+.fp button.fp-pill[aria-pressed="true"] { background: var(--radar) !important; color: var(--on-radar) !important; border-color: var(--radar) !important; }
+.fp-map-wrap .fp-target { position: absolute; left: 8px; right: 8px; bottom: 8px; margin: 0; background: var(--paper);
+  box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+
+/* Homey's stylesheet also styles plain buttons. These rules win, so our buttons look the same everywhere. */
+.fp button { -webkit-appearance: none !important; appearance: none !important; margin: 0 !important; min-height: 0 !important;
+  height: auto !important; text-transform: none !important; letter-spacing: normal !important; line-height: 1.25 !important;
+  font-family: var(--font) !important; cursor: pointer; }
+.fp .fp-choice { display: flex !important; align-items: center; gap: 16px; width: 100% !important; margin-bottom: 10px !important;
+  padding: 16px !important; text-align: left !important; background: var(--paper) !important; color: var(--ink) !important;
+  border: 1.5px solid var(--line) !important; border-radius: var(--radius-l) !important; box-shadow: none !important; font-size: 15px !important; }
+.fp .fp-choice[aria-pressed="true"] { border-color: var(--radar) !important; background: var(--radar-soft) !important; }
+.fp .fp-choice svg { flex: 0 0 52px; width: 52px; height: 52px; color: var(--ink); }
+.fp .fp-choice strong { font-size: 16px; }
+.fp .fp-btn { border: 0 !important; border-radius: 14px !important; padding: 14px 18px !important; font-size: 16px !important;
+  font-weight: 600 !important; box-shadow: none !important; }
+.fp .fp-btn.primary { background: var(--radar) !important; color: var(--on-radar) !important; }
+.fp .fp-btn.primary:disabled { opacity: .35 !important; }
+.fp .fp-btn.ghost { background: transparent !important; color: var(--ink) !important; }
+.fp .fp-btn.danger { background: transparent !important; color: var(--danger) !important; }
+.fp .fp-btn.danger.armed { background: var(--danger) !important; color: #fff !important; }
+.fp .fp-chip { background: var(--paper) !important; color: var(--ink) !important; border: 1.5px solid var(--line) !important;
+  border-radius: 999px !important; padding: 7px 12px !important; font-size: 14px !important; font-weight: 500 !important; box-shadow: none !important; }
+.fp .fp-link { background: none !important; border: 0 !important; color: var(--radar) !important; padding: 4px 0 !important;
+  font-size: 13px !important; font-weight: 600 !important; box-shadow: none !important; }
+.fp .fp-zonerow { background: var(--paper) !important; color: var(--ink) !important; border: 1.5px solid var(--line) !important;
+  border-radius: var(--radius-s) !important; padding: 12px 14px !important; width: 100% !important; box-shadow: none !important; font-size: 15px !important; }
+
+/* the wizard fills the sheet: content on top, buttons at the bottom */
+.fp-wizard { display: flex; flex-direction: column; }
+.fp-wizard > section:not([hidden]) { flex: 1 0 auto; }
+.fp-wizard .fp-actions { margin-top: auto; padding-top: 18px; }
+
+/* custom number of seconds */
+.fp-custom { margin-top: 12px; }
+.fp-custom label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+.fp-custom-row { display: flex; align-items: center; gap: 10px; }
+.fp-custom-row .fp-input { max-width: 140px; }
+.fp-custom-row span { color: var(--muted); }
+.fp-input.invalid { border-color: var(--danger) !important; }
+.fp-error { color: var(--danger) !important; font-size: 13px; margin: 6px 0 0 !important; }
+.fp input[type=number]::-webkit-inner-spin-button, .fp input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.fp input[type=number] { -moz-appearance: textfield; }
+.fp-map-bar-top { margin: 0 2px 8px; }
+

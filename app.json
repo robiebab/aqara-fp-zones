@@ -1,0 +1,1902 @@
+{
+  "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
+  "id": "nl.community.aqarafpzones",
+  "version": "0.6.19",
+  "compatibility": ">=12.2.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "Aqara FP Zones",
+    "nl": "Aqara FP Zones"
+  },
+  "description": {
+    "en": "Distance and software zones for Aqara FP300 and FP400 over Zigbee",
+    "nl": "Afstand en software zones voor Aqara FP300 en FP400 via Zigbee"
+  },
+  "category": [
+    "security"
+  ],
+  "permissions": [
+    "homey:wireless:zigbee"
+  ],
+  "brandColor": "#1F6FEB",
+  "author": {
+    "name": "Robert Hertzer"
+  },
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "api": {
+    "listFp400": {
+      "method": "GET",
+      "path": "/fp400"
+    },
+    "getFp400": {
+      "method": "GET",
+      "path": "/fp400/:token"
+    },
+    "putZone": {
+      "method": "PUT",
+      "path": "/fp400/:token/zones/:slot"
+    },
+    "deleteZone": {
+      "method": "DELETE",
+      "path": "/fp400/:token/zones/:slot"
+    },
+    "readAreas": {
+      "method": "GET",
+      "path": "/fp400/:token/areas"
+    },
+    "putArea": {
+      "method": "PUT",
+      "path": "/fp400/:token/areas/:type"
+    },
+    "forgetTarget": {
+      "method": "POST",
+      "path": "/fp400/:token/targets/:id/forget"
+    },
+    "logTheme": {
+      "method": "POST",
+      "path": "/debug/theme"
+    },
+    "putRange": {
+      "method": "PUT",
+      "path": "/fp400/:token/range"
+    }
+  },
+  "source": "https://github.com/robiebab/aqara-fp-zones",
+  "flow": {
+    "triggers": [
+      {
+        "title": {
+          "en": "Number of people changed",
+          "nl": "Aantal personen is veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp400|fp400_zone"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "people",
+            "type": "number",
+            "title": {
+              "en": "people",
+              "nl": "personen"
+            },
+            "example": 1
+          }
+        ],
+        "id": "people_changed"
+      },
+      {
+        "id": "target_distance_changed",
+        "title": {
+          "en": "Distance changed",
+          "nl": "Afstand is veranderd"
+        },
+        "tokens": [
+          {
+            "name": "target_distance",
+            "type": "number",
+            "title": {
+              "en": "distance (m)",
+              "nl": "afstand (m)"
+            },
+            "example": 1.25
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp300"
+          }
+        ]
+      },
+      {
+        "id": "distance_below",
+        "title": {
+          "en": "Distance dropped below...",
+          "nl": "Afstand is kleiner geworden dan..."
+        },
+        "titleFormatted": {
+          "en": "Distance dropped below [[distance]] m",
+          "nl": "Afstand is kleiner geworden dan [[distance]] m"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp300"
+          },
+          {
+            "name": "distance",
+            "type": "number",
+            "min": 0,
+            "max": 10,
+            "step": 0.05,
+            "placeholder": {
+              "en": "1.5"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "distance",
+            "type": "number",
+            "title": {
+              "en": "distance (m)",
+              "nl": "afstand (m)"
+            },
+            "example": 1.2
+          }
+        ]
+      },
+      {
+        "id": "distance_above",
+        "title": {
+          "en": "Distance rose above...",
+          "nl": "Afstand is groter geworden dan..."
+        },
+        "titleFormatted": {
+          "en": "Distance rose above [[distance]] m",
+          "nl": "Afstand is groter geworden dan [[distance]] m"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp300"
+          },
+          {
+            "name": "distance",
+            "type": "number",
+            "min": 0,
+            "max": 10,
+            "step": 0.05,
+            "placeholder": {
+              "en": "1.5"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "distance",
+            "type": "number",
+            "title": {
+              "en": "distance (m)",
+              "nl": "afstand (m)"
+            },
+            "example": 1.8
+          }
+        ]
+      },
+      {
+        "id": "entered_range",
+        "title": {
+          "en": "Someone entered distance range",
+          "nl": "Iemand komt binnen afstandsbereik"
+        },
+        "titleFormatted": {
+          "en": "Distance came between [[min]] and [[max]] m",
+          "nl": "Afstand komt tussen [[min]] en [[max]] m"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp300"
+          },
+          {
+            "name": "min",
+            "type": "number",
+            "min": 0,
+            "max": 10,
+            "step": 0.05,
+            "placeholder": {
+              "en": "0"
+            }
+          },
+          {
+            "name": "max",
+            "type": "number",
+            "min": 0,
+            "max": 10,
+            "step": 0.05,
+            "placeholder": {
+              "en": "2"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "distance",
+            "type": "number",
+            "title": {
+              "en": "distance (m)",
+              "nl": "afstand (m)"
+            },
+            "example": 1.2
+          }
+        ]
+      },
+      {
+        "id": "left_range",
+        "title": {
+          "en": "Someone left distance range",
+          "nl": "Iemand verlaat afstandsbereik"
+        },
+        "titleFormatted": {
+          "en": "Distance left [[min]] to [[max]] m",
+          "nl": "Afstand verlaat [[min]] tot [[max]] m"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp300"
+          },
+          {
+            "name": "min",
+            "type": "number",
+            "min": 0,
+            "max": 10,
+            "step": 0.05,
+            "placeholder": {
+              "en": "0"
+            }
+          },
+          {
+            "name": "max",
+            "type": "number",
+            "min": 0,
+            "max": 10,
+            "step": 0.05,
+            "placeholder": {
+              "en": "2"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "distance",
+            "type": "number",
+            "title": {
+              "en": "distance (m)",
+              "nl": "afstand (m)"
+            },
+            "example": 2.4
+          }
+        ]
+      },
+      {
+        "id": "fp300_learning_done",
+        "title": {
+          "nl": "AI ruimtelijk leren is klaar",
+          "en": "AI spatial learning finished"
+        },
+        "tokens": [
+          {
+            "name": "success",
+            "type": "boolean",
+            "title": {
+              "nl": "gelukt",
+              "en": "succeeded"
+            },
+            "example": true
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp300"
+          }
+        ]
+      },
+      {
+        "id": "fp300_pir_on",
+        "title": {
+          "nl": "De PIR zag beweging",
+          "en": "The PIR saw movement"
+        },
+        "hint": {
+          "nl": "Alleen de PIR, los van de mmWave aanwezigheid. Werkt als Detectie met op mmWave + PIR of Alleen PIR staat. In mmWave + PIR modus zet de sensor de PIR uit zolang de mmWave al iemand ziet; dan komt deze kaart pas weer na een lege ruimte.",
+          "en": "Only the PIR, separate from the mmWave presence. Works when Detection with is mmWave + PIR or PIR only. In mmWave + PIR mode the sensor switches the PIR off while the mmWave already sees someone; this card then fires again after the room was empty."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp300"
+          }
+        ]
+      },
+      {
+        "id": "fp300_pir_off",
+        "title": {
+          "nl": "De PIR ziet geen beweging meer",
+          "en": "The PIR no longer sees movement"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp300"
+          }
+        ]
+      },
+      {
+        "id": "movement_event",
+        "title": {
+          "en": "Movement event...",
+          "nl": "Bewegingsgebeurtenis..."
+        },
+        "titleFormatted": {
+          "en": "Movement event [[event]]",
+          "nl": "Bewegingsgebeurtenis [[event]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp400"
+          },
+          {
+            "name": "event",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "enter",
+                "label": {
+                  "en": "someone enters the room",
+                  "nl": "iemand komt de kamer in"
+                }
+              },
+              {
+                "id": "leave",
+                "label": {
+                  "en": "someone leaves the room",
+                  "nl": "iemand verlaat de kamer"
+                }
+              },
+              {
+                "id": "approach",
+                "label": {
+                  "en": "someone approaches",
+                  "nl": "iemand komt dichterbij"
+                }
+              },
+              {
+                "id": "away",
+                "label": {
+                  "en": "someone walks away",
+                  "nl": "iemand loopt weg"
+                }
+              },
+              {
+                "id": "left_in",
+                "label": {
+                  "en": "in from the left",
+                  "nl": "binnen vanaf links"
+                }
+              },
+              {
+                "id": "left_out",
+                "label": {
+                  "en": "out to the left",
+                  "nl": "naar links weg"
+                }
+              },
+              {
+                "id": "right_in",
+                "label": {
+                  "en": "in from the right",
+                  "nl": "binnen vanaf rechts"
+                }
+              },
+              {
+                "id": "right_out",
+                "label": {
+                  "en": "out to the right",
+                  "nl": "naar rechts weg"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "fp400_learning_done",
+        "title": {
+          "nl": "AI ruimtelijk leren is klaar",
+          "en": "AI spatial learning finished"
+        },
+        "tokens": [
+          {
+            "name": "success",
+            "type": "boolean",
+            "title": {
+              "nl": "gelukt",
+              "en": "succeeded"
+            },
+            "example": true
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp400"
+          }
+        ]
+      },
+      {
+        "id": "zone_person_entered",
+        "title": {
+          "en": "A person entered the zone",
+          "nl": "Een persoon kwam de zone binnen"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp400_zone"
+          }
+        ]
+      },
+      {
+        "id": "zone_person_left",
+        "title": {
+          "en": "A person left the zone",
+          "nl": "Een persoon verliet de zone"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp400_zone"
+          }
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "id": "distance_between",
+        "title": {
+          "en": "Distance !{{is|is not}} between...",
+          "nl": "Afstand !{{is|is niet}} tussen..."
+        },
+        "titleFormatted": {
+          "en": "Distance !{{is|is not}} between [[min]] and [[max]] m",
+          "nl": "Afstand !{{is|is niet}} tussen [[min]] en [[max]] m"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp300"
+          },
+          {
+            "name": "min",
+            "type": "number",
+            "min": 0,
+            "max": 10,
+            "step": 0.05,
+            "placeholder": {
+              "en": "0"
+            }
+          },
+          {
+            "name": "max",
+            "type": "number",
+            "min": 0,
+            "max": 10,
+            "step": 0.05,
+            "placeholder": {
+              "en": "2"
+            }
+          }
+        ]
+      },
+      {
+        "id": "fp300_pir_active",
+        "title": {
+          "nl": "De PIR ziet !{{wel|geen}} beweging",
+          "en": "The PIR !{{sees|does not see}} movement"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp300"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "start_tracking",
+        "title": {
+          "en": "Start distance measurement",
+          "nl": "Start afstandsmeting"
+        },
+        "hint": {
+          "en": "Sent right away. If the sensor is asleep it is sent again as soon as the sensor wakes up.",
+          "nl": "Wordt direct verstuurd. Slaapt de sensor, dan wordt het opnieuw verstuurd zodra de sensor wakker wordt."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp300"
+          }
+        ]
+      },
+      {
+        "id": "set_range",
+        "title": {
+          "en": "Set detection range",
+          "nl": "Stel detectiebereik in"
+        },
+        "titleFormatted": {
+          "en": "Set detection range from [[min]] to [[max]] m",
+          "nl": "Stel detectiebereik in van [[min]] tot [[max]] m"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=fp300"
+          },
+          {
+            "name": "min",
+            "type": "number",
+            "min": 0,
+            "max": 5.75,
+            "step": 0.25,
+            "placeholder": {
+              "en": "0"
+            }
+          },
+          {
+            "name": "max",
+            "type": "number",
+            "min": 0.25,
+            "max": 6,
+            "step": 0.25,
+            "placeholder": {
+              "en": "6"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "drivers": [
+    {
+      "name": {
+        "en": "Presence sensor FP300",
+        "nl": "Aanwezigheidssensor FP300"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "alarm_motion",
+        "target_distance",
+        "measure_temperature",
+        "measure_humidity",
+        "measure_luminance",
+        "measure_battery",
+        "button.identify",
+        "button.spatial_learning",
+        "button.restart",
+        "button.reset_defaults"
+      ],
+      "energy": {
+        "batteries": [
+          "CR2450",
+          "CR2450"
+        ]
+      },
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "zigbee"
+      ],
+      "images": {
+        "small": "/drivers/fp300/assets/images/small.png",
+        "large": "/drivers/fp300/assets/images/large.png",
+        "xlarge": "/drivers/fp300/assets/images/xlarge.png"
+      },
+      "zigbee": {
+        "manufacturerName": [
+          "Aqara",
+          "LUMI"
+        ],
+        "productId": [
+          "lumi.sensor_occupy.agl8"
+        ],
+        "endpoints": {
+          "1": {
+            "clusters": [
+              0,
+              3,
+              1024,
+              1026,
+              1029,
+              64704
+            ],
+            "bindings": [
+              1024,
+              1026,
+              1029,
+              64704
+            ]
+          }
+        },
+        "learnmode": {
+          "image": "/drivers/fp300/assets/icon.svg",
+          "instruction": {
+            "en": "Make sure the FP300 runs Zigbee firmware (switch the protocol in the Aqara Home app first). Then hold the reset button for more than 5 seconds until the blue light flashes three times.",
+            "nl": "Zorg dat de FP300 op Zigbee staat (schakel het protocol eerst om in de Aqara Home app). Houd daarna de resetknop langer dan 5 seconden ingedrukt tot het blauwe lampje drie keer knippert."
+          }
+        }
+      },
+      "capabilitiesOptions": {
+        "button.identify": {
+          "maintenanceAction": true,
+          "title": {
+            "en": "Identify",
+            "nl": "Identificeren"
+          },
+          "desc": {
+            "en": "Blinks the sensor light. Sent as soon as the sensor is awake.",
+            "nl": "Laat het lampje van de sensor knipperen. Wordt verstuurd zodra de sensor wakker is."
+          }
+        },
+        "button.spatial_learning": {
+          "maintenanceAction": true,
+          "title": {
+            "en": "AI spatial learning",
+            "nl": "AI ruimtelijk leren"
+          },
+          "desc": {
+            "en": "Lets the sensor learn the empty room. Make sure nobody is in the room. Sent as soon as the sensor is awake.",
+            "nl": "Laat de sensor de lege ruimte leren. Zorg dat er niemand in de ruimte is. Wordt verstuurd zodra de sensor wakker is."
+          }
+        },
+        "button.restart": {
+          "maintenanceAction": true,
+          "title": {
+            "en": "Restart sensor",
+            "nl": "Sensor herstarten"
+          },
+          "desc": {
+            "en": "Restarts the sensor. Sent as soon as the sensor is awake.",
+            "nl": "Herstart de sensor. Wordt verstuurd zodra de sensor wakker is."
+          }
+        },
+        "button.reset_defaults": {
+          "maintenanceAction": true,
+          "title": {
+            "en": "Restore default settings",
+            "nl": "Standaardinstellingen herstellen"
+          },
+          "desc": {
+            "en": "Restores this app's settings and lets the sensor restore its factory settings, without pairing again. Zones are kept. Sent as soon as the sensor is awake.",
+            "nl": "Zet de instellingen van deze app terug en laat de sensor zijn fabrieksinstellingen herstellen, zonder opnieuw te koppelen. Zones blijven bewaard. Wordt verstuurd zodra de sensor wakker is."
+          }
+        }
+      },
+      "id": "fp300",
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "nl": "AI ruimtelijk leren",
+            "en": "AI spatial learning"
+          },
+          "children": [
+            {
+              "id": "firmware_info",
+              "type": "label",
+              "label": {
+                "nl": "Firmware",
+                "en": "Firmware"
+              },
+              "value": "-",
+              "hint": {
+                "nl": "Gelezen uit de sensor na het starten van de app. FP300's met verschillende firmware gedragen zich soms anders; bijwerken kan via de Aqara Home app.",
+                "en": "Read from the sensor after the app starts. FP300s with different firmware sometimes behave differently; updating is done with the Aqara Home app."
+              }
+            },
+            {
+              "id": "learning_status",
+              "type": "label",
+              "label": {
+                "nl": "Voortgang: AI Ruimtelijk inleren",
+                "en": "Progress: AI spatial learning"
+              },
+              "value": "Niet bezig",
+              "hint": {
+                "nl": "Start AI ruimtelijk inleren via Onderhoudsacties. Tijdens het inleren zie je hier de voortgang, en daarna 10 minuten de uitkomst; daarbuiten staat hier 'Niet bezig'. De FP300 meldt zelf niet wanneer hij klaar is; de voortgang volgt de 10 minuten die Aqara aanraadt. Sluit en open deze instellingen opnieuw om de nieuwste stand te zien.",
+                "en": "Start AI spatial learning via Maintenance actions. While it runs you see the progress here, and the result for 10 minutes afterwards; otherwise it shows 'Not running'. The FP300 does not report when it is done; progress follows the 10 minutes Aqara advises. Close and reopen these settings to see the latest state."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Detection range",
+            "nl": "Detectiebereik"
+          },
+          "children": [
+            {
+              "id": "range_min",
+              "type": "number",
+              "label": {
+                "en": "Detect from (m)",
+                "nl": "Detecteren vanaf (m)"
+              },
+              "value": 0,
+              "min": 0,
+              "max": 5.75,
+              "step": 0.25,
+              "hint": {
+                "en": "Rounded to blocks of 0.25 m. Only used by the mmWave radar.",
+                "nl": "Afgerond op blokken van 0,25 m. Geldt alleen voor de mmWave radar."
+              }
+            },
+            {
+              "id": "range_max",
+              "type": "number",
+              "label": {
+                "en": "Detect up to (m)",
+                "nl": "Detecteren tot (m)"
+              },
+              "value": 6,
+              "min": 0.25,
+              "max": 6,
+              "step": 0.25
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Presence",
+            "nl": "Aanwezigheid"
+          },
+          "children": [
+            {
+              "id": "detection_mode",
+              "type": "dropdown",
+              "label": {
+                "en": "Detection with",
+                "nl": "Detectie met"
+              },
+              "value": "0",
+              "values": [
+                {
+                  "id": "0",
+                  "label": {
+                    "en": "mmWave + PIR",
+                    "nl": "mmWave + PIR"
+                  }
+                },
+                {
+                  "id": "1",
+                  "label": {
+                    "en": "mmWave only",
+                    "nl": "Alleen mmWave"
+                  }
+                },
+                {
+                  "id": "2",
+                  "label": {
+                    "en": "PIR only",
+                    "nl": "Alleen PIR"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "ai_interference",
+              "type": "checkbox",
+              "value": false,
+              "label": {
+                "en": "AI interference detection",
+                "nl": "AI interferentiedetectie"
+              },
+              "hint": {
+                "en": "Recognises fans, air conditioners and other sources of interference.",
+                "nl": "Herkent ventilatoren, airco's en andere storingsbronnen."
+              }
+            },
+            {
+              "id": "ai_adaptive",
+              "type": "checkbox",
+              "value": false,
+              "label": {
+                "en": "Adaptive sensitivity",
+                "nl": "Adaptieve gevoeligheid"
+              },
+              "hint": {
+                "en": "The sensor adjusts its sensitivity to the room by itself.",
+                "nl": "De sensor past zijn gevoeligheid zelf aan de ruimte aan."
+              }
+            },
+            {
+              "id": "sensitivity",
+              "type": "dropdown",
+              "label": {
+                "en": "Sensitivity",
+                "nl": "Gevoeligheid"
+              },
+              "value": "2",
+              "values": [
+                {
+                  "id": "1",
+                  "label": {
+                    "en": "Low",
+                    "nl": "Laag"
+                  }
+                },
+                {
+                  "id": "2",
+                  "label": {
+                    "en": "Medium",
+                    "nl": "Midden"
+                  }
+                },
+                {
+                  "id": "3",
+                  "label": {
+                    "en": "High",
+                    "nl": "Hoog"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "absence_delay",
+              "type": "number",
+              "label": {
+                "en": "Absence delay (s)",
+                "nl": "Afwezigheidsvertraging (s)"
+              },
+              "value": 30,
+              "min": 1,
+              "max": 300,
+              "step": 1
+            },
+            {
+              "id": "pir_interval",
+              "type": "number",
+              "label": {
+                "nl": "PIR interval (s)",
+                "en": "PIR interval (s)"
+              },
+              "value": 30,
+              "min": 2,
+              "max": 300,
+              "step": 1,
+              "hint": {
+                "nl": "Hoe snel de PIR na een detectie opnieuw kan melden. Korter reageert sneller op nieuwe beweging, maar kost meer batterij (volgens Zigbee2MQTT).",
+                "en": "How soon the PIR can report again after a detection. Shorter reacts faster to new movement, but uses more battery (according to Zigbee2MQTT)."
+              }
+            },
+            {
+              "id": "motion_source",
+              "type": "dropdown",
+              "value": "mmwave",
+              "label": {
+                "nl": "Bewegingsalarm bij",
+                "en": "Motion alarm on"
+              },
+              "values": [
+                {
+                  "id": "mmwave",
+                  "label": {
+                    "nl": "mmWave",
+                    "en": "mmWave"
+                  }
+                },
+                {
+                  "id": "pir",
+                  "label": {
+                    "nl": "PIR",
+                    "en": "PIR"
+                  }
+                },
+                {
+                  "id": "both",
+                  "label": {
+                    "nl": "mmWave + PIR",
+                    "en": "mmWave + PIR"
+                  }
+                }
+              ],
+              "hint": {
+                "nl": "Bepaalt wat het bewegingsalarm van dit apparaat aanzet, en daarmee ook wanneer de Homey zone (kamer) actief wordt. mmWave: de aanwezigheid van de sensor, ook als je stilzit. PIR: alleen beweging; sneller bij binnenkomst, maar uit als je stilzit (in mmWave + PIR modus zet de sensor de PIR uit zodra de mmWave je ziet). mmWave + PIR: aan bij de eerste van de twee, uit als beide niemand meer zien. Let op: de PIR kijkt verder dan het detectiebereik. Dit staat los van 'Detectie met', dat bepaalt wat de sensor zelf gebruikt; staat die op Alleen mmWave, dan meldt de PIR niets.",
+                "en": "Decides what switches this device's motion alarm on, and so also when the Homey zone (room) becomes active. mmWave: the sensor's presence, also when you sit still. PIR: movement only; faster on entry, but off when you sit still (in mmWave + PIR mode the sensor switches the PIR off once the mmWave sees you). mmWave + PIR: on with the first of the two, off when both see nobody. Note: the PIR looks further than the detection range. This is separate from 'Detection with', which decides what the sensor itself uses; set to mmWave only, the PIR reports nothing."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Distance measurement",
+            "nl": "Afstandsmeting"
+          },
+          "children": [
+            {
+              "id": "distance_mode",
+              "type": "dropdown",
+              "value": "auto",
+              "label": {
+                "nl": "Afstand meten",
+                "en": "Measure distance"
+              },
+              "values": [
+                {
+                  "id": "auto",
+                  "label": {
+                    "nl": "Automatisch: alleen voor zones",
+                    "en": "Automatic: only for zones"
+                  }
+                },
+                {
+                  "id": "present",
+                  "label": {
+                    "nl": "Altijd als er iemand is",
+                    "en": "Whenever someone is present"
+                  }
+                },
+                {
+                  "id": "always",
+                  "label": {
+                    "nl": "Continu, ook in een lege ruimte",
+                    "en": "Continuously, also in an empty room"
+                  }
+                },
+                {
+                  "id": "off",
+                  "label": {
+                    "nl": "Uit",
+                    "en": "Off"
+                  }
+                }
+              ],
+              "hint": {
+                "nl": "Bepaalt wanneer de FP300 afstand meet. De app houdt de meting dan vanzelf aan zolang dat volgens je keuze nodig is. Automatisch: als de sensor zones heeft en er iemand is (aanbevolen). Altijd als er iemand is: ook zonder zones, bijvoorbeeld voor flows met de afstand. Continu: ook in een lege ruimte, zodat een zone direct reageert bij binnenkomst; kost merkbaar meer batterij. Uit: geen afstand, zones op deze sensor werken dan niet. Als de strook in de app instellingen open staat, wordt altijd gemeten.",
+                "en": "Decides when the FP300 measures distance. The app keeps the measurement running by itself for as long as your choice requires. Automatic: when the sensor has zones and someone is present (recommended). Whenever someone is present: also without zones, e.g. for flows using the distance. Continuously: also in an empty room, so a zone reacts at once on entry; uses noticeably more battery. Off: no distance, zones on this sensor do not work. While the strip in the app settings is open, it always measures."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "nl": "Temperatuur en luchtvochtigheid",
+            "en": "Temperature and humidity"
+          },
+          "children": [
+            {
+              "id": "th_sampling",
+              "type": "dropdown",
+              "label": {
+                "nl": "Meten",
+                "en": "Sampling"
+              },
+              "value": "2",
+              "values": [
+                {
+                  "id": "0",
+                  "label": {
+                    "nl": "Uit",
+                    "en": "Off"
+                  }
+                },
+                {
+                  "id": "1",
+                  "label": {
+                    "nl": "Laag",
+                    "en": "Low"
+                  }
+                },
+                {
+                  "id": "2",
+                  "label": {
+                    "nl": "Midden",
+                    "en": "Medium"
+                  }
+                },
+                {
+                  "id": "3",
+                  "label": {
+                    "nl": "Hoog",
+                    "en": "High"
+                  }
+                },
+                {
+                  "id": "4",
+                  "label": {
+                    "nl": "Eigen instelling",
+                    "en": "Custom"
+                  }
+                }
+              ],
+              "hint": {
+                "nl": "Hoe vaak de sensor meet. Vaker meten kost meer batterij. Pas je hieronder een interval of drempel aan, dan zet de app dit automatisch op Eigen instelling, want alleen dan werken die.",
+                "en": "How often the sensor measures. Measuring more often uses more battery. If you change an interval or threshold below, the app sets this to Custom automatically, because only then do they apply."
+              }
+            },
+            {
+              "id": "th_sampling_period",
+              "type": "number",
+              "label": {
+                "nl": "Meten elke (s)",
+                "en": "Measure every (s)"
+              },
+              "value": 10,
+              "min": 0.5,
+              "max": 3600,
+              "step": 0.5,
+              "hint": {
+                "nl": "Alleen bij Eigen instelling. Geldt voor temperatuur én luchtvochtigheid.",
+                "en": "Custom only. Applies to temperature and humidity."
+              }
+            },
+            {
+              "id": "temp_report_mode",
+              "type": "dropdown",
+              "label": {
+                "nl": "Temperatuur: rapporteren bij",
+                "en": "Temperature: report on"
+              },
+              "value": "3",
+              "values": [
+                {
+                  "id": "1",
+                  "label": {
+                    "nl": "Drempel",
+                    "en": "Threshold"
+                  }
+                },
+                {
+                  "id": "2",
+                  "label": {
+                    "nl": "Interval",
+                    "en": "Interval"
+                  }
+                },
+                {
+                  "id": "3",
+                  "label": {
+                    "nl": "Drempel en interval",
+                    "en": "Threshold and interval"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "temp_report_interval",
+              "type": "number",
+              "label": {
+                "nl": "Temperatuur: interval (s)",
+                "en": "Temperature: interval (s)"
+              },
+              "value": 3600,
+              "min": 600,
+              "max": 3600,
+              "step": 600,
+              "hint": {
+                "nl": "In stappen van 600 s (10 minuten).",
+                "en": "In steps of 600 s (10 minutes)."
+              }
+            },
+            {
+              "id": "temp_report_threshold",
+              "type": "number",
+              "label": {
+                "nl": "Temperatuur: drempel (°C)",
+                "en": "Temperature: threshold (°C)"
+              },
+              "value": 0.5,
+              "min": 0.2,
+              "max": 3,
+              "step": 0.1,
+              "hint": {
+                "nl": "De sensor kent voor temperatuur een drempel in graden, niet in procenten.",
+                "en": "The sensor uses a threshold in degrees for temperature, not a percentage."
+              }
+            },
+            {
+              "id": "humidity_report_mode",
+              "type": "dropdown",
+              "label": {
+                "nl": "Luchtvochtigheid: rapporteren bij",
+                "en": "Humidity: report on"
+              },
+              "value": "3",
+              "values": [
+                {
+                  "id": "1",
+                  "label": {
+                    "nl": "Drempel",
+                    "en": "Threshold"
+                  }
+                },
+                {
+                  "id": "2",
+                  "label": {
+                    "nl": "Interval",
+                    "en": "Interval"
+                  }
+                },
+                {
+                  "id": "3",
+                  "label": {
+                    "nl": "Drempel en interval",
+                    "en": "Threshold and interval"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "humidity_report_interval",
+              "type": "number",
+              "label": {
+                "nl": "Luchtvochtigheid: interval (s)",
+                "en": "Humidity: interval (s)"
+              },
+              "value": 3600,
+              "min": 600,
+              "max": 3600,
+              "step": 600,
+              "hint": {
+                "nl": "In stappen van 600 s (10 minuten).",
+                "en": "In steps of 600 s (10 minutes)."
+              }
+            },
+            {
+              "id": "humidity_report_threshold",
+              "type": "number",
+              "label": {
+                "nl": "Luchtvochtigheid: drempel (%)",
+                "en": "Humidity: threshold (%)"
+              },
+              "value": 5,
+              "min": 2,
+              "max": 15,
+              "step": 0.5
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "nl": "Helderheid",
+            "en": "Light"
+          },
+          "children": [
+            {
+              "id": "light_sampling",
+              "type": "dropdown",
+              "label": {
+                "nl": "Meten",
+                "en": "Sampling"
+              },
+              "value": "2",
+              "values": [
+                {
+                  "id": "0",
+                  "label": {
+                    "nl": "Uit",
+                    "en": "Off"
+                  }
+                },
+                {
+                  "id": "1",
+                  "label": {
+                    "nl": "Laag",
+                    "en": "Low"
+                  }
+                },
+                {
+                  "id": "2",
+                  "label": {
+                    "nl": "Midden",
+                    "en": "Medium"
+                  }
+                },
+                {
+                  "id": "3",
+                  "label": {
+                    "nl": "Hoog",
+                    "en": "High"
+                  }
+                },
+                {
+                  "id": "4",
+                  "label": {
+                    "nl": "Eigen instelling",
+                    "en": "Custom"
+                  }
+                }
+              ],
+              "hint": {
+                "nl": "Hoe vaak de sensor meet. Vaker meten kost meer batterij. Pas je hieronder een interval of drempel aan, dan zet de app dit automatisch op Eigen instelling, want alleen dan werken die.",
+                "en": "How often the sensor measures. Measuring more often uses more battery. If you change an interval or threshold below, the app sets this to Custom automatically, because only then do they apply."
+              }
+            },
+            {
+              "id": "light_sampling_period",
+              "type": "number",
+              "label": {
+                "nl": "Meten elke (s)",
+                "en": "Measure every (s)"
+              },
+              "value": 10,
+              "min": 0.5,
+              "max": 3600,
+              "step": 0.5,
+              "hint": {
+                "nl": "Alleen bij Eigen instelling.",
+                "en": "Custom only."
+              }
+            },
+            {
+              "id": "light_report_mode",
+              "type": "dropdown",
+              "label": {
+                "nl": "Helderheid: rapporteren bij",
+                "en": "Light: report on"
+              },
+              "value": "3",
+              "values": [
+                {
+                  "id": "1",
+                  "label": {
+                    "nl": "Drempel",
+                    "en": "Threshold"
+                  }
+                },
+                {
+                  "id": "2",
+                  "label": {
+                    "nl": "Interval",
+                    "en": "Interval"
+                  }
+                },
+                {
+                  "id": "3",
+                  "label": {
+                    "nl": "Drempel en interval",
+                    "en": "Threshold and interval"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "light_report_interval",
+              "type": "number",
+              "label": {
+                "nl": "Helderheid: interval (s)",
+                "en": "Light: interval (s)"
+              },
+              "value": 600,
+              "min": 20,
+              "max": 3600,
+              "step": 20,
+              "hint": {
+                "nl": "In stappen van 20 s.",
+                "en": "In steps of 20 s."
+              }
+            },
+            {
+              "id": "light_report_threshold",
+              "type": "number",
+              "label": {
+                "nl": "Helderheid: drempel (%)",
+                "en": "Light: threshold (%)"
+              },
+              "value": 10,
+              "min": 3,
+              "max": 20,
+              "step": 0.5,
+              "hint": {
+                "nl": "Procentuele verandering van de helderheid.",
+                "en": "Percentage change of the light level."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "nl": "Temperatuur en luchtvochtigheid: weergave",
+            "en": "Temperature and humidity: display"
+          },
+          "children": [
+            {
+              "id": "temperature_offset",
+              "type": "number",
+              "value": 0,
+              "min": -10,
+              "max": 10,
+              "step": 0.1,
+              "units": {
+                "en": "°C"
+              },
+              "label": {
+                "nl": "Temperatuur correctie",
+                "en": "Temperature offset"
+              },
+              "hint": {
+                "nl": "Wordt opgeteld bij de gemeten temperatuur.",
+                "en": "Added to the measured temperature."
+              }
+            },
+            {
+              "id": "temperature_decimals",
+              "type": "dropdown",
+              "value": "1",
+              "label": {
+                "nl": "Temperatuur decimalen",
+                "en": "Temperature decimals"
+              },
+              "values": [
+                {
+                  "id": "1",
+                  "label": {
+                    "en": "1"
+                  }
+                },
+                {
+                  "id": "2",
+                  "label": {
+                    "en": "2"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "humidity_offset",
+              "type": "number",
+              "value": 0,
+              "min": -10,
+              "max": 10,
+              "step": 1,
+              "units": {
+                "en": "%"
+              },
+              "label": {
+                "nl": "Luchtvochtigheid correctie",
+                "en": "Humidity offset"
+              },
+              "hint": {
+                "nl": "Wordt opgeteld bij de gemeten luchtvochtigheid.",
+                "en": "Added to the measured humidity."
+              }
+            },
+            {
+              "id": "humidity_decimals",
+              "type": "dropdown",
+              "value": "1",
+              "label": {
+                "nl": "Luchtvochtigheid decimalen",
+                "en": "Humidity decimals"
+              },
+              "values": [
+                {
+                  "id": "1",
+                  "label": {
+                    "en": "1"
+                  }
+                },
+                {
+                  "id": "2",
+                  "label": {
+                    "en": "2"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": {
+        "en": "FP300 via Matter",
+        "nl": "FP300 via Matter"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "alarm_motion",
+        "measure_temperature",
+        "measure_humidity",
+        "measure_luminance",
+        "measure_battery"
+      ],
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "matter"
+      ],
+      "energy": {
+        "batteries": [
+          "CR2450",
+          "CR2450"
+        ]
+      },
+      "images": {
+        "small": "/drivers/fp300_matter/assets/images/small.png",
+        "large": "/drivers/fp300_matter/assets/images/large.png",
+        "xlarge": "/drivers/fp300_matter/assets/images/xlarge.png"
+      },
+      "matter": {
+        "vendorId": 4447,
+        "productId": 8197,
+        "learnmode": {
+          "image": "/drivers/fp300_matter/assets/learn.svg",
+          "instruction": {
+            "en": "For an FP300 set to Matter (Thread) in the Aqara Home app. Hold the reset button for more than 5 seconds until the blue light flashes three times, then scan the Matter code on the sensor. Note: via Matter, Homey handles the sensor itself; zones, distance and the FP300 settings of this app are only available when the FP300 uses Zigbee.",
+            "nl": "Voor een FP300 die in de Aqara Home app op Matter (Thread) staat. Houd de resetknop langer dan 5 seconden ingedrukt tot het blauwe lampje drie keer knippert, en scan daarna de Matter code op de sensor. Let op: via Matter regelt Homey de sensor zelf; zones, afstand en de FP300 instellingen van deze app zijn er alleen als de FP300 op Zigbee staat."
+          }
+        }
+      },
+      "id": "fp300_matter"
+    },
+    {
+      "name": {
+        "en": "Spatial sensor FP400",
+        "nl": "Ruimtesensor FP400"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "alarm_motion",
+        "people_count",
+        "measure_luminance",
+        "button.identify",
+        "button.spatial_learning",
+        "button.reset_defaults"
+      ],
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "zigbee"
+      ],
+      "images": {
+        "small": "/drivers/fp400/assets/images/small.png",
+        "large": "/drivers/fp400/assets/images/large.png",
+        "xlarge": "/drivers/fp400/assets/images/xlarge.png"
+      },
+      "zigbee": {
+        "manufacturerName": [
+          "Aqara",
+          "LUMI"
+        ],
+        "productId": [
+          "lumi.models.4447_8295"
+        ],
+        "endpoints": {
+          "1": {
+            "clusters": [
+              0,
+              3,
+              128,
+              1030,
+              64522,
+              64523,
+              64524
+            ],
+            "bindings": [
+              1030
+            ]
+          },
+          "2": {
+            "clusters": [
+              1024
+            ]
+          }
+        },
+        "learnmode": {
+          "image": "/drivers/fp400/assets/icon.svg",
+          "instruction": {
+            "en": "Make sure the FP400 runs Zigbee firmware (switch it in the Aqara Home app), then put it in pairing mode as described in its manual.",
+            "nl": "Zorg dat de FP400 Zigbee firmware heeft (omzetten in de Aqara Home app) en zet hem daarna in koppelmodus zoals in de handleiding staat."
+          }
+        }
+      },
+      "capabilitiesOptions": {
+        "button.identify": {
+          "maintenanceAction": true,
+          "title": {
+            "en": "Identify",
+            "nl": "Identificeren"
+          },
+          "desc": {
+            "en": "Blinks the sensor light.",
+            "nl": "Laat het lampje van de sensor knipperen."
+          }
+        },
+        "button.spatial_learning": {
+          "maintenanceAction": true,
+          "title": {
+            "en": "AI spatial learning",
+            "nl": "AI ruimtelijk leren"
+          },
+          "desc": {
+            "en": "Lets the sensor learn the empty room. Make sure nobody is in the room. You get a notification when it is done.",
+            "nl": "Laat de sensor de lege ruimte leren. Zorg dat er niemand in de ruimte is. Je krijgt een melding als het klaar is."
+          }
+        },
+        "button.reset_defaults": {
+          "maintenanceAction": true,
+          "title": {
+            "en": "Restore default settings",
+            "nl": "Standaardinstellingen herstellen"
+          },
+          "desc": {
+            "en": "Restores this app's settings and lets the sensor restore its factory settings, without pairing again. Zones in this app are kept; ignore spots and outside room in the sensor may be cleared.",
+            "nl": "Zet de instellingen van deze app terug en laat de sensor zijn fabrieksinstellingen herstellen, zonder opnieuw te koppelen. Zones in deze app blijven bewaard; negeerplekken en buiten kamer in de sensor kunnen gewist worden."
+          }
+        }
+      },
+      "id": "fp400",
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Presence",
+            "nl": "Aanwezigheid"
+          },
+          "children": [
+            {
+              "id": "absence_timeout",
+              "type": "number",
+              "label": {
+                "en": "Absence delay (s)",
+                "nl": "Afwezigheidsvertraging (s)"
+              },
+              "value": 10,
+              "min": 0,
+              "max": 300,
+              "step": 1
+            },
+            {
+              "id": "sensitivity",
+              "type": "dropdown",
+              "label": {
+                "en": "Sensitivity",
+                "nl": "Gevoeligheid"
+              },
+              "value": "1",
+              "values": [
+                {
+                  "id": "0",
+                  "label": {
+                    "en": "Low",
+                    "nl": "Laag"
+                  }
+                },
+                {
+                  "id": "1",
+                  "label": {
+                    "en": "Medium",
+                    "nl": "Midden"
+                  }
+                },
+                {
+                  "id": "2",
+                  "label": {
+                    "en": "High",
+                    "nl": "Hoog"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "AI",
+            "nl": "AI"
+          },
+          "children": [
+            {
+              "id": "ai_high_precision",
+              "type": "checkbox",
+              "value": false,
+              "label": {
+                "en": "AI high precision person recognition",
+                "nl": "AI hoge precisie mensherkenning"
+              },
+              "hint": {
+                "en": "Better at telling people apart from other movement.",
+                "nl": "Onderscheidt mensen beter van andere beweging."
+              }
+            },
+            {
+              "id": "ai_adaptive",
+              "type": "checkbox",
+              "value": false,
+              "label": {
+                "en": "Adaptive sensitivity",
+                "nl": "Adaptieve gevoeligheid"
+              },
+              "hint": {
+                "en": "The sensor adjusts its sensitivity to the room by itself.",
+                "nl": "De sensor past zijn gevoeligheid zelf aan de ruimte aan."
+              }
+            },
+            {
+              "id": "ai_interference",
+              "type": "checkbox",
+              "value": false,
+              "label": {
+                "en": "AI interference detection",
+                "nl": "AI interferentiedetectie"
+              },
+              "hint": {
+                "en": "Recognises fans, curtains and other sources of interference.",
+                "nl": "Herkent ventilatoren, gordijnen en andere storingsbronnen."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "nl": "Helderheid",
+            "en": "Light"
+          },
+          "children": [
+            {
+              "id": "lux_poll_interval",
+              "type": "number",
+              "label": {
+                "nl": "Opvragen elke (s)",
+                "en": "Ask every (s)"
+              },
+              "value": 60,
+              "min": 10,
+              "max": 3600,
+              "step": 10,
+              "hint": {
+                "nl": "Hoe vaak Homey de helderheid bij de sensor opvraagt. De FP400 stuurt helderheid niet uit zichzelf en heeft er, voor zover bekend, geen eigen instellingen voor; daarom regelt Homey dit. De FP400 werkt op netstroom, dus vaker opvragen kost geen batterij.",
+                "en": "How often Homey asks the sensor for the light level. The FP400 does not send light by itself and, as far as known, has no own settings for it; that is why Homey handles this. The FP400 is mains powered, so asking more often costs no battery."
+              }
+            },
+            {
+              "id": "lux_report_mode",
+              "type": "dropdown",
+              "label": {
+                "nl": "Helderheid: bijwerken bij",
+                "en": "Light: update on"
+              },
+              "value": "3",
+              "values": [
+                {
+                  "id": "1",
+                  "label": {
+                    "nl": "Drempel",
+                    "en": "Threshold"
+                  }
+                },
+                {
+                  "id": "2",
+                  "label": {
+                    "nl": "Interval",
+                    "en": "Interval"
+                  }
+                },
+                {
+                  "id": "3",
+                  "label": {
+                    "nl": "Drempel en interval",
+                    "en": "Threshold and interval"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "lux_report_interval",
+              "type": "number",
+              "label": {
+                "nl": "Helderheid: interval (s)",
+                "en": "Light: interval (s)"
+              },
+              "value": 600,
+              "min": 20,
+              "max": 3600,
+              "step": 20,
+              "hint": {
+                "nl": "Werk de waarde in Homey minstens zo vaak bij, ook zonder verandering.",
+                "en": "Update the value in Homey at least this often, also without change."
+              }
+            },
+            {
+              "id": "lux_report_threshold",
+              "type": "number",
+              "label": {
+                "nl": "Helderheid: drempel (%)",
+                "en": "Light: threshold (%)"
+              },
+              "value": 10,
+              "min": 3,
+              "max": 20,
+              "step": 0.5,
+              "hint": {
+                "nl": "Werk de waarde direct bij als de helderheid minstens zoveel procent veranderd is.",
+                "en": "Update the value right away when the light level changed by at least this percentage."
+              }
+            }
+          ]
+        },
+        {
+          "id": "zones_hint",
+          "type": "label",
+          "label": {
+            "en": "Zones",
+            "nl": "Zones"
+          },
+          "value": "App settings",
+          "hint": {
+            "en": "Draw zones on the map in the app settings of Aqara FP Zones. Then add each zone as a device via 'Zone (FP300 / FP400)'.",
+            "nl": "Teken zones op de kaart in de app instellingen van Aqara FP Zones. Voeg daarna elke zone toe als apparaat via 'Zone (FP300 / FP400)'."
+          }
+        }
+      ]
+    },
+    {
+      "name": {
+        "en": "FP400 via Matter",
+        "nl": "FP400 via Matter"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "alarm_motion",
+        "measure_luminance"
+      ],
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "matter"
+      ],
+      "images": {
+        "small": "/drivers/fp400_matter/assets/images/small.png",
+        "large": "/drivers/fp400_matter/assets/images/large.png",
+        "xlarge": "/drivers/fp400_matter/assets/images/xlarge.png"
+      },
+      "matter": {
+        "vendorId": 4447,
+        "productId": 8295,
+        "learnmode": {
+          "image": "/drivers/fp400_matter/assets/learn.svg",
+          "instruction": {
+            "en": "For an FP400 set to Matter (Thread) in the Aqara Home app. Put the sensor in pairing mode and scan the Matter code. Note: over Matter the FP400 only offers presence and light; zones, positions and people counting from this app need the FP400 on Zigbee.",
+            "nl": "Voor een FP400 die in de Aqara Home app op Matter (Thread) staat. Zet de sensor in koppelmodus en scan de Matter code. Let op: via Matter geeft de FP400 alleen aanwezigheid en licht; zones, posities en personen tellen van deze app werken alleen als de FP400 op Zigbee staat."
+          }
+        }
+      },
+      "id": "fp400_matter"
+    },
+    {
+      "name": {
+        "en": "Zone (FP300 / FP400)",
+        "nl": "Zone (FP300 / FP400)"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "alarm_motion",
+        "people_count"
+      ],
+      "platforms": [
+        "local"
+      ],
+      "images": {
+        "small": "/drivers/fp400_zone/assets/images/small.png",
+        "large": "/drivers/fp400_zone/assets/images/large.png",
+        "xlarge": "/drivers/fp400_zone/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "wizard"
+        }
+      ],
+      "id": "fp400_zone"
+    }
+  ],
+  "capabilities": {
+    "learning_progress": {
+      "type": "number",
+      "title": {
+        "en": "AI spatial learning",
+        "nl": "AI ruimtelijk leren"
+      },
+      "units": {
+        "en": "%"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 100,
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/learning.svg"
+    },
+    "people_count": {
+      "type": "number",
+      "title": {
+        "en": "People",
+        "nl": "Personen"
+      },
+      "decimals": 0,
+      "min": 0,
+      "max": 10,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/people.svg"
+    },
+    "target_distance": {
+      "type": "number",
+      "title": {
+        "en": "Target distance",
+        "nl": "Afstand tot persoon"
+      },
+      "units": {
+        "en": "m"
+      },
+      "decimals": 2,
+      "min": 0,
+      "max": 10,
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "/assets/distance.svg"
+    }
+  }
+}

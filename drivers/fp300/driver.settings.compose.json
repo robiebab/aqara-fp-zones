@@ -1,0 +1,720 @@
+[
+  {
+    "type": "group",
+    "label": {
+      "nl": "AI ruimtelijk leren",
+      "en": "AI spatial learning"
+    },
+    "children": [
+      {
+        "id": "firmware_info",
+        "type": "label",
+        "label": {
+          "nl": "Firmware",
+          "en": "Firmware"
+        },
+        "value": "-",
+        "hint": {
+          "nl": "Gelezen uit de sensor na het starten van de app. FP300's met verschillende firmware gedragen zich soms anders; bijwerken kan via de Aqara Home app.",
+          "en": "Read from the sensor after the app starts. FP300s with different firmware sometimes behave differently; updating is done with the Aqara Home app."
+        }
+      },
+      {
+        "id": "learning_status",
+        "type": "label",
+        "label": {
+          "nl": "Voortgang: AI Ruimtelijk inleren",
+          "en": "Progress: AI spatial learning"
+        },
+        "value": "Niet bezig",
+        "hint": {
+          "nl": "Start AI ruimtelijk inleren via Onderhoudsacties. Tijdens het inleren zie je hier de voortgang, en daarna 10 minuten de uitkomst; daarbuiten staat hier 'Niet bezig'. De FP300 meldt zelf niet wanneer hij klaar is; de voortgang volgt de 10 minuten die Aqara aanraadt. Sluit en open deze instellingen opnieuw om de nieuwste stand te zien.",
+          "en": "Start AI spatial learning via Maintenance actions. While it runs you see the progress here, and the result for 10 minutes afterwards; otherwise it shows 'Not running'. The FP300 does not report when it is done; progress follows the 10 minutes Aqara advises. Close and reopen these settings to see the latest state."
+        }
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "Detection range",
+      "nl": "Detectiebereik"
+    },
+    "children": [
+      {
+        "id": "range_min",
+        "type": "number",
+        "label": {
+          "en": "Detect from (m)",
+          "nl": "Detecteren vanaf (m)"
+        },
+        "value": 0,
+        "min": 0,
+        "max": 5.75,
+        "step": 0.25,
+        "hint": {
+          "en": "Rounded to blocks of 0.25 m. Only used by the mmWave radar.",
+          "nl": "Afgerond op blokken van 0,25 m. Geldt alleen voor de mmWave radar."
+        }
+      },
+      {
+        "id": "range_max",
+        "type": "number",
+        "label": {
+          "en": "Detect up to (m)",
+          "nl": "Detecteren tot (m)"
+        },
+        "value": 6,
+        "min": 0.25,
+        "max": 6,
+        "step": 0.25
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "Presence",
+      "nl": "Aanwezigheid"
+    },
+    "children": [
+      {
+        "id": "detection_mode",
+        "type": "dropdown",
+        "label": {
+          "en": "Detection with",
+          "nl": "Detectie met"
+        },
+        "value": "0",
+        "values": [
+          {
+            "id": "0",
+            "label": {
+              "en": "mmWave + PIR",
+              "nl": "mmWave + PIR"
+            }
+          },
+          {
+            "id": "1",
+            "label": {
+              "en": "mmWave only",
+              "nl": "Alleen mmWave"
+            }
+          },
+          {
+            "id": "2",
+            "label": {
+              "en": "PIR only",
+              "nl": "Alleen PIR"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ai_interference",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "AI interference detection",
+          "nl": "AI interferentiedetectie"
+        },
+        "hint": {
+          "en": "Recognises fans, air conditioners and other sources of interference.",
+          "nl": "Herkent ventilatoren, airco's en andere storingsbronnen."
+        }
+      },
+      {
+        "id": "ai_adaptive",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "Adaptive sensitivity",
+          "nl": "Adaptieve gevoeligheid"
+        },
+        "hint": {
+          "en": "The sensor adjusts its sensitivity to the room by itself.",
+          "nl": "De sensor past zijn gevoeligheid zelf aan de ruimte aan."
+        }
+      },
+      {
+        "id": "sensitivity",
+        "type": "dropdown",
+        "label": {
+          "en": "Sensitivity",
+          "nl": "Gevoeligheid"
+        },
+        "value": "2",
+        "values": [
+          {
+            "id": "1",
+            "label": {
+              "en": "Low",
+              "nl": "Laag"
+            }
+          },
+          {
+            "id": "2",
+            "label": {
+              "en": "Medium",
+              "nl": "Midden"
+            }
+          },
+          {
+            "id": "3",
+            "label": {
+              "en": "High",
+              "nl": "Hoog"
+            }
+          }
+        ]
+      },
+      {
+        "id": "absence_delay",
+        "type": "number",
+        "label": {
+          "en": "Absence delay (s)",
+          "nl": "Afwezigheidsvertraging (s)"
+        },
+        "value": 30,
+        "min": 1,
+        "max": 300,
+        "step": 1
+      },
+      {
+        "id": "pir_interval",
+        "type": "number",
+        "label": {
+          "nl": "PIR interval (s)",
+          "en": "PIR interval (s)"
+        },
+        "value": 30,
+        "min": 2,
+        "max": 300,
+        "step": 1,
+        "hint": {
+          "nl": "Hoe snel de PIR na een detectie opnieuw kan melden. Korter reageert sneller op nieuwe beweging, maar kost meer batterij (volgens Zigbee2MQTT).",
+          "en": "How soon the PIR can report again after a detection. Shorter reacts faster to new movement, but uses more battery (according to Zigbee2MQTT)."
+        }
+      },
+      {
+        "id": "motion_source",
+        "type": "dropdown",
+        "value": "mmwave",
+        "label": {
+          "nl": "Bewegingsalarm bij",
+          "en": "Motion alarm on"
+        },
+        "values": [
+          {
+            "id": "mmwave",
+            "label": {
+              "nl": "mmWave",
+              "en": "mmWave"
+            }
+          },
+          {
+            "id": "pir",
+            "label": {
+              "nl": "PIR",
+              "en": "PIR"
+            }
+          },
+          {
+            "id": "both",
+            "label": {
+              "nl": "mmWave + PIR",
+              "en": "mmWave + PIR"
+            }
+          }
+        ],
+        "hint": {
+          "nl": "Bepaalt wat het bewegingsalarm van dit apparaat aanzet, en daarmee ook wanneer de Homey zone (kamer) actief wordt. mmWave: de aanwezigheid van de sensor, ook als je stilzit. PIR: alleen beweging; sneller bij binnenkomst, maar uit als je stilzit (in mmWave + PIR modus zet de sensor de PIR uit zodra de mmWave je ziet). mmWave + PIR: aan bij de eerste van de twee, uit als beide niemand meer zien. Let op: de PIR kijkt verder dan het detectiebereik. Dit staat los van 'Detectie met', dat bepaalt wat de sensor zelf gebruikt; staat die op Alleen mmWave, dan meldt de PIR niets.",
+          "en": "Decides what switches this device's motion alarm on, and so also when the Homey zone (room) becomes active. mmWave: the sensor's presence, also when you sit still. PIR: movement only; faster on entry, but off when you sit still (in mmWave + PIR mode the sensor switches the PIR off once the mmWave sees you). mmWave + PIR: on with the first of the two, off when both see nobody. Note: the PIR looks further than the detection range. This is separate from 'Detection with', which decides what the sensor itself uses; set to mmWave only, the PIR reports nothing."
+        }
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "Distance measurement",
+      "nl": "Afstandsmeting"
+    },
+    "children": [
+      {
+        "id": "distance_mode",
+        "type": "dropdown",
+        "value": "auto",
+        "label": {
+          "nl": "Afstand meten",
+          "en": "Measure distance"
+        },
+        "values": [
+          {
+            "id": "auto",
+            "label": {
+              "nl": "Automatisch: alleen voor zones",
+              "en": "Automatic: only for zones"
+            }
+          },
+          {
+            "id": "present",
+            "label": {
+              "nl": "Altijd als er iemand is",
+              "en": "Whenever someone is present"
+            }
+          },
+          {
+            "id": "always",
+            "label": {
+              "nl": "Continu, ook in een lege ruimte",
+              "en": "Continuously, also in an empty room"
+            }
+          },
+          {
+            "id": "off",
+            "label": {
+              "nl": "Uit",
+              "en": "Off"
+            }
+          }
+        ],
+        "hint": {
+          "nl": "Bepaalt wanneer de FP300 afstand meet. De app houdt de meting dan vanzelf aan zolang dat volgens je keuze nodig is. Automatisch: als de sensor zones heeft en er iemand is (aanbevolen). Altijd als er iemand is: ook zonder zones, bijvoorbeeld voor flows met de afstand. Continu: ook in een lege ruimte, zodat een zone direct reageert bij binnenkomst; kost merkbaar meer batterij. Uit: geen afstand, zones op deze sensor werken dan niet. Als de strook in de app instellingen open staat, wordt altijd gemeten.",
+          "en": "Decides when the FP300 measures distance. The app keeps the measurement running by itself for as long as your choice requires. Automatic: when the sensor has zones and someone is present (recommended). Whenever someone is present: also without zones, e.g. for flows using the distance. Continuously: also in an empty room, so a zone reacts at once on entry; uses noticeably more battery. Off: no distance, zones on this sensor do not work. While the strip in the app settings is open, it always measures."
+        }
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "nl": "Temperatuur en luchtvochtigheid",
+      "en": "Temperature and humidity"
+    },
+    "children": [
+      {
+        "id": "th_sampling",
+        "type": "dropdown",
+        "label": {
+          "nl": "Meten",
+          "en": "Sampling"
+        },
+        "value": "2",
+        "values": [
+          {
+            "id": "0",
+            "label": {
+              "nl": "Uit",
+              "en": "Off"
+            }
+          },
+          {
+            "id": "1",
+            "label": {
+              "nl": "Laag",
+              "en": "Low"
+            }
+          },
+          {
+            "id": "2",
+            "label": {
+              "nl": "Midden",
+              "en": "Medium"
+            }
+          },
+          {
+            "id": "3",
+            "label": {
+              "nl": "Hoog",
+              "en": "High"
+            }
+          },
+          {
+            "id": "4",
+            "label": {
+              "nl": "Eigen instelling",
+              "en": "Custom"
+            }
+          }
+        ],
+        "hint": {
+          "nl": "Hoe vaak de sensor meet. Vaker meten kost meer batterij. Pas je hieronder een interval of drempel aan, dan zet de app dit automatisch op Eigen instelling, want alleen dan werken die.",
+          "en": "How often the sensor measures. Measuring more often uses more battery. If you change an interval or threshold below, the app sets this to Custom automatically, because only then do they apply."
+        }
+      },
+      {
+        "id": "th_sampling_period",
+        "type": "number",
+        "label": {
+          "nl": "Meten elke (s)",
+          "en": "Measure every (s)"
+        },
+        "value": 10,
+        "min": 0.5,
+        "max": 3600,
+        "step": 0.5,
+        "hint": {
+          "nl": "Alleen bij Eigen instelling. Geldt voor temperatuur én luchtvochtigheid.",
+          "en": "Custom only. Applies to temperature and humidity."
+        }
+      },
+      {
+        "id": "temp_report_mode",
+        "type": "dropdown",
+        "label": {
+          "nl": "Temperatuur: rapporteren bij",
+          "en": "Temperature: report on"
+        },
+        "value": "3",
+        "values": [
+          {
+            "id": "1",
+            "label": {
+              "nl": "Drempel",
+              "en": "Threshold"
+            }
+          },
+          {
+            "id": "2",
+            "label": {
+              "nl": "Interval",
+              "en": "Interval"
+            }
+          },
+          {
+            "id": "3",
+            "label": {
+              "nl": "Drempel en interval",
+              "en": "Threshold and interval"
+            }
+          }
+        ]
+      },
+      {
+        "id": "temp_report_interval",
+        "type": "number",
+        "label": {
+          "nl": "Temperatuur: interval (s)",
+          "en": "Temperature: interval (s)"
+        },
+        "value": 3600,
+        "min": 600,
+        "max": 3600,
+        "step": 600,
+        "hint": {
+          "nl": "In stappen van 600 s (10 minuten).",
+          "en": "In steps of 600 s (10 minutes)."
+        }
+      },
+      {
+        "id": "temp_report_threshold",
+        "type": "number",
+        "label": {
+          "nl": "Temperatuur: drempel (°C)",
+          "en": "Temperature: threshold (°C)"
+        },
+        "value": 0.5,
+        "min": 0.2,
+        "max": 3,
+        "step": 0.1,
+        "hint": {
+          "nl": "De sensor kent voor temperatuur een drempel in graden, niet in procenten.",
+          "en": "The sensor uses a threshold in degrees for temperature, not a percentage."
+        }
+      },
+      {
+        "id": "humidity_report_mode",
+        "type": "dropdown",
+        "label": {
+          "nl": "Luchtvochtigheid: rapporteren bij",
+          "en": "Humidity: report on"
+        },
+        "value": "3",
+        "values": [
+          {
+            "id": "1",
+            "label": {
+              "nl": "Drempel",
+              "en": "Threshold"
+            }
+          },
+          {
+            "id": "2",
+            "label": {
+              "nl": "Interval",
+              "en": "Interval"
+            }
+          },
+          {
+            "id": "3",
+            "label": {
+              "nl": "Drempel en interval",
+              "en": "Threshold and interval"
+            }
+          }
+        ]
+      },
+      {
+        "id": "humidity_report_interval",
+        "type": "number",
+        "label": {
+          "nl": "Luchtvochtigheid: interval (s)",
+          "en": "Humidity: interval (s)"
+        },
+        "value": 3600,
+        "min": 600,
+        "max": 3600,
+        "step": 600,
+        "hint": {
+          "nl": "In stappen van 600 s (10 minuten).",
+          "en": "In steps of 600 s (10 minutes)."
+        }
+      },
+      {
+        "id": "humidity_report_threshold",
+        "type": "number",
+        "label": {
+          "nl": "Luchtvochtigheid: drempel (%)",
+          "en": "Humidity: threshold (%)"
+        },
+        "value": 5,
+        "min": 2,
+        "max": 15,
+        "step": 0.5
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "nl": "Helderheid",
+      "en": "Light"
+    },
+    "children": [
+      {
+        "id": "light_sampling",
+        "type": "dropdown",
+        "label": {
+          "nl": "Meten",
+          "en": "Sampling"
+        },
+        "value": "2",
+        "values": [
+          {
+            "id": "0",
+            "label": {
+              "nl": "Uit",
+              "en": "Off"
+            }
+          },
+          {
+            "id": "1",
+            "label": {
+              "nl": "Laag",
+              "en": "Low"
+            }
+          },
+          {
+            "id": "2",
+            "label": {
+              "nl": "Midden",
+              "en": "Medium"
+            }
+          },
+          {
+            "id": "3",
+            "label": {
+              "nl": "Hoog",
+              "en": "High"
+            }
+          },
+          {
+            "id": "4",
+            "label": {
+              "nl": "Eigen instelling",
+              "en": "Custom"
+            }
+          }
+        ],
+        "hint": {
+          "nl": "Hoe vaak de sensor meet. Vaker meten kost meer batterij. Pas je hieronder een interval of drempel aan, dan zet de app dit automatisch op Eigen instelling, want alleen dan werken die.",
+          "en": "How often the sensor measures. Measuring more often uses more battery. If you change an interval or threshold below, the app sets this to Custom automatically, because only then do they apply."
+        }
+      },
+      {
+        "id": "light_sampling_period",
+        "type": "number",
+        "label": {
+          "nl": "Meten elke (s)",
+          "en": "Measure every (s)"
+        },
+        "value": 10,
+        "min": 0.5,
+        "max": 3600,
+        "step": 0.5,
+        "hint": {
+          "nl": "Alleen bij Eigen instelling.",
+          "en": "Custom only."
+        }
+      },
+      {
+        "id": "light_report_mode",
+        "type": "dropdown",
+        "label": {
+          "nl": "Helderheid: rapporteren bij",
+          "en": "Light: report on"
+        },
+        "value": "3",
+        "values": [
+          {
+            "id": "1",
+            "label": {
+              "nl": "Drempel",
+              "en": "Threshold"
+            }
+          },
+          {
+            "id": "2",
+            "label": {
+              "nl": "Interval",
+              "en": "Interval"
+            }
+          },
+          {
+            "id": "3",
+            "label": {
+              "nl": "Drempel en interval",
+              "en": "Threshold and interval"
+            }
+          }
+        ]
+      },
+      {
+        "id": "light_report_interval",
+        "type": "number",
+        "label": {
+          "nl": "Helderheid: interval (s)",
+          "en": "Light: interval (s)"
+        },
+        "value": 600,
+        "min": 20,
+        "max": 3600,
+        "step": 20,
+        "hint": {
+          "nl": "In stappen van 20 s.",
+          "en": "In steps of 20 s."
+        }
+      },
+      {
+        "id": "light_report_threshold",
+        "type": "number",
+        "label": {
+          "nl": "Helderheid: drempel (%)",
+          "en": "Light: threshold (%)"
+        },
+        "value": 10,
+        "min": 3,
+        "max": 20,
+        "step": 0.5,
+        "hint": {
+          "nl": "Procentuele verandering van de helderheid.",
+          "en": "Percentage change of the light level."
+        }
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "nl": "Temperatuur en luchtvochtigheid: weergave",
+      "en": "Temperature and humidity: display"
+    },
+    "children": [
+      {
+        "id": "temperature_offset",
+        "type": "number",
+        "value": 0,
+        "min": -10,
+        "max": 10,
+        "step": 0.1,
+        "units": {
+          "en": "°C"
+        },
+        "label": {
+          "nl": "Temperatuur correctie",
+          "en": "Temperature offset"
+        },
+        "hint": {
+          "nl": "Wordt opgeteld bij de gemeten temperatuur.",
+          "en": "Added to the measured temperature."
+        }
+      },
+      {
+        "id": "temperature_decimals",
+        "type": "dropdown",
+        "value": "1",
+        "label": {
+          "nl": "Temperatuur decimalen",
+          "en": "Temperature decimals"
+        },
+        "values": [
+          {
+            "id": "1",
+            "label": {
+              "en": "1"
+            }
+          },
+          {
+            "id": "2",
+            "label": {
+              "en": "2"
+            }
+          }
+        ]
+      },
+      {
+        "id": "humidity_offset",
+        "type": "number",
+        "value": 0,
+        "min": -10,
+        "max": 10,
+        "step": 1,
+        "units": {
+          "en": "%"
+        },
+        "label": {
+          "nl": "Luchtvochtigheid correctie",
+          "en": "Humidity offset"
+        },
+        "hint": {
+          "nl": "Wordt opgeteld bij de gemeten luchtvochtigheid.",
+          "en": "Added to the measured humidity."
+        }
+      },
+      {
+        "id": "humidity_decimals",
+        "type": "dropdown",
+        "value": "1",
+        "label": {
+          "nl": "Luchtvochtigheid decimalen",
+          "en": "Humidity decimals"
+        },
+        "values": [
+          {
+            "id": "1",
+            "label": {
+              "en": "1"
+            }
+          },
+          {
+            "id": "2",
+            "label": {
+              "en": "2"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

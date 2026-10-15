@@ -1,0 +1,18 @@
+{
+  "triggers": [
+    {
+      "id": "zone_person_entered",
+      "title": {
+        "en": "A person entered the zone",
+        "nl": "Een persoon kwam de zone binnen"
+      }
+    },
+    {
+      "id": "zone_person_left",
+      "title": {
+        "en": "A person left the zone",
+        "nl": "Een persoon verliet de zone"
+      }
+    }
+  ]
+}

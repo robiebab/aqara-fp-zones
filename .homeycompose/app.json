@@ -1,0 +1,71 @@
+{
+  "id": "nl.community.aqarafpzones",
+  "version": "0.6.19",
+  "compatibility": ">=12.2.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "Aqara FP Zones",
+    "nl": "Aqara FP Zones"
+  },
+  "description": {
+    "en": "Distance and software zones for Aqara FP300 and FP400 over Zigbee",
+    "nl": "Afstand en software zones voor Aqara FP300 en FP400 via Zigbee"
+  },
+  "category": [
+    "security"
+  ],
+  "permissions": [
+    "homey:wireless:zigbee"
+  ],
+  "brandColor": "#1F6FEB",
+  "author": {
+    "name": "Robert Hertzer"
+  },
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "api": {
+    "listFp400": {
+      "method": "GET",
+      "path": "/fp400"
+    },
+    "getFp400": {
+      "method": "GET",
+      "path": "/fp400/:token"
+    },
+    "putZone": {
+      "method": "PUT",
+      "path": "/fp400/:token/zones/:slot"
+    },
+    "deleteZone": {
+      "method": "DELETE",
+      "path": "/fp400/:token/zones/:slot"
+    },
+    "readAreas": {
+      "method": "GET",
+      "path": "/fp400/:token/areas"
+    },
+    "putArea": {
+      "method": "PUT",
+      "path": "/fp400/:token/areas/:type"
+    },
+    "forgetTarget": {
+      "method": "POST",
+      "path": "/fp400/:token/targets/:id/forget"
+    },
+    "logTheme": {
+      "method": "POST",
+      "path": "/debug/theme"
+    },
+    "putRange": {
+      "method": "PUT",
+      "path": "/fp400/:token/range"
+    }
+  },
+  "source": "https://github.com/robiebab/aqara-fp-zones"
+}

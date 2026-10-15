@@ -1,0 +1,20 @@
+{
+  "name": "nl.community.aqarafpzones",
+  "version": "0.6.19",
+  "main": "app.js",
+  "private": true,
+  "license": "MIT",
+  "dependencies": {
+    "homey-zigbeedriver": "^2.2.18",
+    "zigbee-clusters": "^3.8.0"
+  },
+  "scripts": {
+    "test": "node test/run.js",
+    "build-ui": "python3 tools/build-ui.py"
+  },
+  "author": "Robert Hertzer",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robiebab/aqara-fp-zones.git"
+  }
+}

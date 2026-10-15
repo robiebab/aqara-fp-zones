@@ -1,0 +1,116 @@
+{
+  "name": {
+    "en": "Presence sensor FP300",
+    "nl": "Aanwezigheidssensor FP300"
+  },
+  "class": "sensor",
+  "capabilities": [
+    "alarm_motion",
+    "target_distance",
+    "measure_temperature",
+    "measure_humidity",
+    "measure_luminance",
+    "measure_battery",
+    "button.identify",
+    "button.spatial_learning",
+    "button.restart",
+    "button.reset_defaults"
+  ],
+  "energy": {
+    "batteries": [
+      "CR2450",
+      "CR2450"
+    ]
+  },
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "zigbee"
+  ],
+  "images": {
+    "small": "{{driverAssetsPath}}/images/small.png",
+    "large": "{{driverAssetsPath}}/images/large.png",
+    "xlarge": "{{driverAssetsPath}}/images/xlarge.png"
+  },
+  "zigbee": {
+    "manufacturerName": [
+      "Aqara",
+      "LUMI"
+    ],
+    "productId": [
+      "lumi.sensor_occupy.agl8"
+    ],
+    "endpoints": {
+      "1": {
+        "clusters": [
+          0,
+          3,
+          1024,
+          1026,
+          1029,
+          64704
+        ],
+        "bindings": [
+          1024,
+          1026,
+          1029,
+          64704
+        ]
+      }
+    },
+    "learnmode": {
+      "image": "{{driverAssetsPath}}/icon.svg",
+      "instruction": {
+        "en": "Make sure the FP300 runs Zigbee firmware (switch the protocol in the Aqara Home app first). Then hold the reset button for more than 5 seconds until the blue light flashes three times.",
+        "nl": "Zorg dat de FP300 op Zigbee staat (schakel het protocol eerst om in de Aqara Home app). Houd daarna de resetknop langer dan 5 seconden ingedrukt tot het blauwe lampje drie keer knippert."
+      }
+    }
+  },
+  "capabilitiesOptions": {
+    "button.identify": {
+      "maintenanceAction": true,
+      "title": {
+        "en": "Identify",
+        "nl": "Identificeren"
+      },
+      "desc": {
+        "en": "Blinks the sensor light. Sent as soon as the sensor is awake.",
+        "nl": "Laat het lampje van de sensor knipperen. Wordt verstuurd zodra de sensor wakker is."
+      }
+    },
+    "button.spatial_learning": {
+      "maintenanceAction": true,
+      "title": {
+        "en": "AI spatial learning",
+        "nl": "AI ruimtelijk leren"
+      },
+      "desc": {
+        "en": "Lets the sensor learn the empty room. Make sure nobody is in the room. Sent as soon as the sensor is awake.",
+        "nl": "Laat de sensor de lege ruimte leren. Zorg dat er niemand in de ruimte is. Wordt verstuurd zodra de sensor wakker is."
+      }
+    },
+    "button.restart": {
+      "maintenanceAction": true,
+      "title": {
+        "en": "Restart sensor",
+        "nl": "Sensor herstarten"
+      },
+      "desc": {
+        "en": "Restarts the sensor. Sent as soon as the sensor is awake.",
+        "nl": "Herstart de sensor. Wordt verstuurd zodra de sensor wakker is."
+      }
+    },
+    "button.reset_defaults": {
+      "maintenanceAction": true,
+      "title": {
+        "en": "Restore default settings",
+        "nl": "Standaardinstellingen herstellen"
+      },
+      "desc": {
+        "en": "Restores this app's settings and lets the sensor restore its factory settings, without pairing again. Zones are kept. Sent as soon as the sensor is awake.",
+        "nl": "Zet de instellingen van deze app terug en laat de sensor zijn fabrieksinstellingen herstellen, zonder opnieuw te koppelen. Zones blijven bewaard. Wordt verstuurd zodra de sensor wakker is."
+      }
+    }
+  }
+}

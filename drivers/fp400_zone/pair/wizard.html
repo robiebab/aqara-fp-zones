@@ -1,0 +1,1086 @@
+<style>
+:root {
+  --paper: #ffffff;
+  --floor: #f2f5f8;
+  --ink: #17212b;
+  --muted: #5b6b7a;
+  --line: #dce3ea;
+  --radar: #0f7c8c;
+  --radar-soft: #e3f2f3;
+  --target: #f26b1d;
+  --danger: #c2352b;
+  --on-radar: #ffffff;
+  --radius-l: 18px;
+  --radius-s: 10px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+/* Dark colours follow Homey's own page, not the phone setting: fpTheme() in the script sets data-theme
+   from the background Homey actually draws, so the view always blends in. */
+:root[data-theme="dark"] {
+  --paper: #12181f;
+  --floor: #1f2730;
+  --ink: #eef2f6;
+  --muted: #9aa8b5;
+  --line: #2f3a46;
+  --radar: #3fb6c4;
+  --radar-soft: #16343a;
+  --on-radar: #08262b;
+}
+.fp { font-family: var(--font); color: var(--ink); background: transparent; font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+.fp * { box-sizing: border-box; }
+.fp h2 { font-size: 22px; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 6px; }
+.fp p { margin: 0 0 12px; color: var(--muted); max-width: 60ch; }
+.fp .num { font-variant-numeric: tabular-nums; }
+
+/* progress: a real sequence, so it is numbered */
+.fp-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0 18px; }
+.fp-steps span { height: 4px; border-radius: 4px; background: var(--line); transition: background .25s; }
+.fp-steps span.done { background: var(--radar); }
+.fp-step-label { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+
+/* sensor choice */
+.fp-choice { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px; margin-bottom: 10px; background: var(--paper); color: var(--ink);
+  border: 1.5px solid var(--line); border-radius: var(--radius-l); text-align: left; font: inherit; cursor: pointer; }
+.fp-choice[aria-pressed="true"] { border-color: var(--radar); background: var(--radar-soft); }
+.fp-choice svg { flex: 0 0 40px; height: 40px; }
+.fp-choice strong { display: block; font-weight: 600; }
+.fp-choice small { color: var(--muted); font-size: 13px; }
+
+/* map */
+.fp-map-wrap { position: relative; border-radius: var(--radius-l); overflow: hidden; background: var(--floor); }
+.fp-map { display: block; width: 100%; touch-action: none; cursor: crosshair; }
+.fp-map-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 10px 2px 0; font-size: 13px; color: var(--muted); }
+.fp-live { display: inline-flex; align-items: center; gap: 6px; }
+.fp-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.fp-live.on i { background: var(--target); animation: fp-pulse 1.6s ease-out infinite; }
+@keyframes fp-pulse { 0% { box-shadow: 0 0 0 0 rgba(242,107,29,.5); } 100% { box-shadow: 0 0 0 8px rgba(242,107,29,0); } }
+@media (prefers-reduced-motion: reduce) { .fp-live.on i { animation: none; } .fp-steps span { transition: none; } }
+
+/* switch */
+.fp-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.fp-switch input { appearance: none; -webkit-appearance: none; width: 34px; height: 20px; border-radius: 20px; background: var(--line); position: relative; margin: 0; cursor: pointer; transition: background .2s; }
+.fp-switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s; }
+.fp-switch input:checked { background: var(--radar); }
+.fp-switch input:checked::after { transform: translateX(14px); }
+
+/* form */
+.fp-field { margin: 0 0 18px; }
+.fp-field label { display: block; font-weight: 600; margin-bottom: 8px; }
+.fp-input { width: 100%; font: inherit; font-size: 17px; padding: 12px 14px; border-radius: var(--radius-s); border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); }
+.fp-input:focus { outline: none; border-color: var(--radar); }
+.fp-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.fp-chip { font: inherit; font-size: 14px; padding: 7px 12px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; }
+.fp .fp-chip[aria-pressed="true"] { border-color: var(--radar) !important; background: var(--radar-soft) !important; color: var(--ink) !important; }
+/* segmented control. Homey loads its own stylesheet on these pages that also styles buttons,
+   so the states here are forced, otherwise the chosen option is not visible. */
+.fp .fp-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px;
+  background: var(--floor); border: 1.5px solid var(--line); border-radius: 14px; }
+.fp .fp-seg > button { -webkit-appearance: none !important; appearance: none !important; margin: 0 !important;
+  border: 0 !important; border-radius: 10px !important; box-shadow: none !important; min-height: 0 !important;
+  background: transparent !important; color: var(--muted) !important; font: 600 14px var(--font) !important;
+  padding: 10px 4px !important; line-height: 1.2 !important; cursor: pointer; }
+.fp .fp-seg > button[aria-pressed="true"] { background: var(--radar) !important; color: var(--on-radar) !important;
+  box-shadow: 0 2px 6px rgba(15, 124, 140, .35) !important; }
+.fp .fp-seg > button:active:not([aria-pressed="true"]) { background: var(--radar-soft) !important; color: var(--ink) !important; }
+.fp .fp-seg-strong > button { padding: 12px 4px !important; font-size: 15px !important; }
+
+/* summary */
+.fp-summary { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; padding: 16px; border: 1.5px solid var(--line); border-radius: var(--radius-l); margin-top: 14px; }
+.fp-summary dt { color: var(--muted); }
+.fp-summary dd { margin: 0; font-weight: 600; text-align: right; }
+
+/* action bar */
+.fp-actions { position: sticky; bottom: 0; display: flex; gap: 10px; padding: 14px 0 6px; background: linear-gradient(to top, var(--paper) 70%, transparent); margin-top: 18px; }
+.fp-btn { font: inherit; font-weight: 600; font-size: 16px; padding: 14px 18px; border-radius: 14px; border: 0; cursor: pointer; }
+.fp-btn.primary { flex: 1; background: var(--radar); color: var(--on-radar); }
+.fp-btn.primary:disabled { opacity: .35; cursor: default; }
+.fp-btn.ghost { background: transparent; color: var(--ink); }
+.fp-btn.danger { background: transparent; color: var(--danger); }
+.fp :focus-visible { outline: 3px solid var(--radar); outline-offset: 2px; }
+
+.fp-note { font-size: 13px; color: var(--muted); }
+.fp-empty { padding: 28px 18px; text-align: center; border: 1.5px dashed var(--line); border-radius: var(--radius-l); color: var(--muted); }
+.fp-zonelist { display: grid; gap: 8px; margin-top: 14px; }
+.fp-zonerow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: var(--radius-s); background: var(--paper); color: var(--ink); font: inherit; text-align: left; cursor: pointer; width: 100%; }
+.fp .fp-zonerow[aria-pressed="true"] { border-color: var(--radar) !important; background: var(--radar-soft) !important; }
+.fp-zonerow i { width: 12px; height: 12px; border-radius: 3px; flex: 0 0 12px; }
+.fp-zonerow span { flex: 1; }
+.fp-zonerow small { color: var(--muted); }
+[hidden] { display: none !important; }
+.fp-actions.static { position: static; background: none; padding-top: 6px; }
+.fp-btn.danger.armed { background: var(--danger); color: #fff; }
+.fp-link { font: inherit; font-size: 13px; font-weight: 600; color: var(--radar); background: none; border: 0; padding: 4px 0; cursor: pointer; }
+.fp-tools { display: flex; gap: 8px; margin-top: 12px; }
+.fp-target { margin-top: 14px; padding: 14px; border: 1.5px solid var(--target); border-radius: var(--radius-l); }
+.fp-target strong { display: block; margin-bottom: 4px; }
+.fp-target .fp-tools { flex-wrap: wrap; align-items: center; margin-top: 4px; }
+
+/* press feedback: every button visibly reacts to a tap */
+.fp button { -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  transition: transform .08s ease, background-color .15s ease, filter .15s ease, opacity .15s ease; }
+.fp button:active:not(:disabled) { transform: scale(0.96); }
+.fp-btn.primary:active:not(:disabled), .fp-btn.danger.armed:active { filter: brightness(0.85); }
+.fp-btn.ghost:active:not(:disabled), .fp-btn.danger:active:not(:disabled) { background: var(--floor); }
+.fp-chip:active:not(:disabled), .fp-zonerow:active, .fp-choice:active, .fp-seg button:active:not([aria-pressed="true"]) { background: var(--radar-soft); }
+.fp-link:active { opacity: .55; }
+
+/* busy: the button shows a spinner while the sensor is being asked */
+.fp button.busy { position: relative; color: transparent !important; pointer-events: none; }
+.fp button.busy::after { content: ""; position: absolute; inset: 0; margin: auto; width: 18px; height: 18px; border-radius: 50%;
+  border: 2.5px solid var(--spin, var(--ink)); border-right-color: transparent; animation: fp-spin .7s linear infinite; }
+.fp-btn.primary.busy { --spin: var(--on-radar); }
+.fp-btn.danger.busy { --spin: var(--danger); }
+@keyframes fp-spin { to { transform: rotate(360deg); } }
+
+/* toast: short confirmation after an action */
+.fp-toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 10;
+  transform: translate(-50%, 16px); opacity: 0; pointer-events: none; max-width: calc(100% - 32px);
+  background: var(--ink); color: var(--paper); font: 600 14px var(--font); padding: 10px 16px; border-radius: 999px;
+  width: max-content; text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .18); transition: opacity .2s ease, transform .2s ease; }
+.fp-toast.show { opacity: 1; transform: translate(-50%, 0); }
+.fp-toast.error { background: var(--danger); color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  .fp button, .fp-toast { transition: none; }
+  .fp button:active:not(:disabled) { transform: none; }
+  .fp button.busy::after { animation-duration: 2s; }
+}
+.fp-btn.busy:disabled { opacity: 1; }
+
+/* panel and toolbar above the map */
+.fp-panel { margin-top: 16px; padding: 16px; border: 1.5px solid var(--line); border-radius: var(--radius-l); }
+.fp-toolbar { position: sticky; top: 0; z-index: 3; margin-top: 16px; padding: 10px 12px; display: grid; gap: 10px;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: var(--radius-l) var(--radius-l) 0 0; border-bottom: 0; }
+.fp-toolbar-row { display: flex; align-items: center; gap: 10px; }
+.fp-toolbar-row .fp-count { flex: 1; font-size: 14px; color: var(--muted); }
+.fp-toolbar-row .fp-btn.small { padding: 11px 14px; font-size: 15px; border-radius: 12px; }
+.fp-toolbar-row .fp-btn.primary.small { flex: 1; }
+.fp-toolbar + .fp-map-wrap { border-radius: 0 0 var(--radius-l) var(--radius-l); border: 1.5px solid var(--line); border-top: 0; }
+
+/* overlays on the map */
+.fp-overlay { position: absolute; left: 8px; right: 8px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.fp-overlay.top { top: 8px; }
+.fp-pill { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--paper) 88%, transparent); border: 1px solid var(--line); color: var(--ink);
+  font: 600 12px var(--font); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+button.fp-pill { cursor: pointer; -webkit-appearance: none; appearance: none; }
+.fp button.fp-pill[aria-pressed="true"] { background: var(--radar) !important; color: var(--on-radar) !important; border-color: var(--radar) !important; }
+.fp-map-wrap .fp-target { position: absolute; left: 8px; right: 8px; bottom: 8px; margin: 0; background: var(--paper);
+  box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+
+/* Homey's stylesheet also styles plain buttons. These rules win, so our buttons look the same everywhere. */
+.fp button { -webkit-appearance: none !important; appearance: none !important; margin: 0 !important; min-height: 0 !important;
+  height: auto !important; text-transform: none !important; letter-spacing: normal !important; line-height: 1.25 !important;
+  font-family: var(--font) !important; cursor: pointer; }
+.fp .fp-choice { display: flex !important; align-items: center; gap: 16px; width: 100% !important; margin-bottom: 10px !important;
+  padding: 16px !important; text-align: left !important; background: var(--paper) !important; color: var(--ink) !important;
+  border: 1.5px solid var(--line) !important; border-radius: var(--radius-l) !important; box-shadow: none !important; font-size: 15px !important; }
+.fp .fp-choice[aria-pressed="true"] { border-color: var(--radar) !important; background: var(--radar-soft) !important; }
+.fp .fp-choice svg { flex: 0 0 52px; width: 52px; height: 52px; color: var(--ink); }
+.fp .fp-choice strong { font-size: 16px; }
+.fp .fp-btn { border: 0 !important; border-radius: 14px !important; padding: 14px 18px !important; font-size: 16px !important;
+  font-weight: 600 !important; box-shadow: none !important; }
+.fp .fp-btn.primary { background: var(--radar) !important; color: var(--on-radar) !important; }
+.fp .fp-btn.primary:disabled { opacity: .35 !important; }
+.fp .fp-btn.ghost { background: transparent !important; color: var(--ink) !important; }
+.fp .fp-btn.danger { background: transparent !important; color: var(--danger) !important; }
+.fp .fp-btn.danger.armed { background: var(--danger) !important; color: #fff !important; }
+.fp .fp-chip { background: var(--paper) !important; color: var(--ink) !important; border: 1.5px solid var(--line) !important;
+  border-radius: 999px !important; padding: 7px 12px !important; font-size: 14px !important; font-weight: 500 !important; box-shadow: none !important; }
+.fp .fp-link { background: none !important; border: 0 !important; color: var(--radar) !important; padding: 4px 0 !important;
+  font-size: 13px !important; font-weight: 600 !important; box-shadow: none !important; }
+.fp .fp-zonerow { background: var(--paper) !important; color: var(--ink) !important; border: 1.5px solid var(--line) !important;
+  border-radius: var(--radius-s) !important; padding: 12px 14px !important; width: 100% !important; box-shadow: none !important; font-size: 15px !important; }
+
+/* the wizard fills the sheet: content on top, buttons at the bottom */
+.fp-wizard { display: flex; flex-direction: column; }
+.fp-wizard > section:not([hidden]) { flex: 1 0 auto; }
+.fp-wizard .fp-actions { margin-top: auto; padding-top: 18px; }
+
+/* custom number of seconds */
+.fp-custom { margin-top: 12px; }
+.fp-custom label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+.fp-custom-row { display: flex; align-items: center; gap: 10px; }
+.fp-custom-row .fp-input { max-width: 140px; }
+.fp-custom-row span { color: var(--muted); }
+.fp-input.invalid { border-color: var(--danger) !important; }
+.fp-error { color: var(--danger) !important; font-size: 13px; margin: 6px 0 0 !important; }
+.fp input[type=number]::-webkit-inner-spin-button, .fp input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.fp input[type=number] { -moz-appearance: textfield; }
+.fp-map-bar-top { margin: 0 2px 8px; }
+
+</style>
+<script>
+/*
+ * FP400 floor map with paintable cells, like the Aqara app.
+ * Grid: 16 columns x 20 rows of 0.5 m; x from -400 to 400 cm, y from 0 to 1000 cm in front of the sensor.
+ * Cell index = row * 16 + column (row 0 is closest to the sensor).
+ */
+var FP_ZONE_COLORS = ['#0f7c8c', '#6b5bd2', '#d9488b', '#c98a00', '#2e9e5b', '#3a7bd5', '#b4532a', '#6c7a89'];
+var FP_GRID = { cols: 16, rows: 20, cell: 50, xMin: -400 };
+
+/*
+ * Colours: follow Homey's look (light or dark). Signals, strongest first:
+ *   1. the user's own choice in the app settings ("light" or "dark")
+ *   2. a Homey dark mode class on the page
+ *   3. Homey's CSS variables (--homey-background-color / --homey-text-color), if this page has them
+ *   4. the real background colour of the page
+ *   5. the phone setting
+ * When the chosen look does not match the page background, the page background is painted too,
+ * so there is never a dark block on a white page or the other way around.
+ */
+function fpParseColor(c) {
+  if (!c || c === 'transparent') return null;
+  var v = c.match(/[\d.]+/g);
+  if (!v || v.length < 3) return null;
+  if (v.length > 3 && Number(v[3]) === 0) return null;
+  return v.slice(0, 3).map(Number);
+}
+function fpLum(rgb) { return (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255; }
+function fpResolveVar(name, prop) {
+  var probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;width:0;height:0;visibility:hidden;' + prop + ':var(' + name + ')';
+  document.body.appendChild(probe);
+  var value = getComputedStyle(probe)[prop === 'color' ? 'color' : 'backgroundColor'];
+  document.body.removeChild(probe);
+  var raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return raw ? fpParseColor(value) : null;
+}
+function fpTheme(pref) {
+  var root = document.documentElement, body = document.body;
+  var info = { pref: pref || 'auto' };
+  // measure Homey's page without our own paint
+  root.style.removeProperty('background'); body.style.removeProperty('background');
+  var classes = (root.className + ' ' + body.className).toLowerCase();
+  info.classes = classes.trim();
+  var pageBg = null;
+  for (var el = body; el && !pageBg; el = el.parentElement) {
+    pageBg = fpParseColor(getComputedStyle(el).backgroundColor);
+  }
+  info.pageBg = pageBg;
+  info.homeyBg = fpResolveVar('--homey-background-color', 'background-color');
+  info.homeyText = fpResolveVar('--homey-text-color', 'color');
+  info.prefersDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  var dark, source;
+  if (pref === 'light' || pref === 'dark') { dark = pref === 'dark'; source = 'choice'; }
+  else if (/homey-dark-mode|\bdark\b/.test(classes)) { dark = true; source = 'class'; }
+  else if (info.homeyBg) { dark = fpLum(info.homeyBg) < 0.5; source = 'homey-background'; }
+  else if (info.homeyText) { dark = fpLum(info.homeyText) > 0.5; source = 'homey-text'; }
+  else if (pageBg) { dark = fpLum(pageBg) < 0.5; source = 'page'; }
+  else { dark = info.prefersDark; source = 'phone'; }
+  info.dark = dark; info.source = source;
+
+  root.setAttribute('data-theme', dark ? 'dark' : 'light');
+  function fits(c) { return c && (fpLum(c) < 0.5) === dark; }
+  var paper = fits(info.homeyBg) ? info.homeyBg : fits(pageBg) ? pageBg : null;
+  if (paper) root.style.setProperty('--paper', 'rgb(' + paper.join(',') + ')'); else root.style.removeProperty('--paper');
+  var matches = fits(pageBg);
+  if (!matches) {
+    // The page behind this view does not match the chosen look: paint it ourselves.
+    root.style.setProperty('background', 'var(--paper)', 'important');
+    body.style.setProperty('background', 'var(--paper)', 'important');
+  }
+  info.painted = !matches;
+  return info;
+}
+
+/** Re-check the look a few times and whenever Homey or the phone changes it. */
+function fpWatchTheme(getPref, onChange) {
+  function run() { var info = fpTheme(getPref()); if (onChange) onChange(info); return info; }
+  [0, 300, 1000, 2500].forEach(function (ms) { setTimeout(run, ms); });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', run); else if (mq.addListener) mq.addListener(run);
+  }
+  if (window.MutationObserver) {
+    var obs = new MutationObserver(function () { run(); });
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  }
+  return run;
+}
+
+function fpCellInfo(cells) {
+  var rows = cells.map(function (c) { return Math.floor(c / FP_GRID.cols); });
+  return {
+    count: cells.length,
+    area: cells.length * 0.25,
+    from: rows.length ? Math.min.apply(null, rows) * 0.5 : 0,
+    to: rows.length ? (Math.max.apply(null, rows) + 1) * 0.5 : 0,
+  };
+}
+
+function FpMap(canvas, options) {
+  var self = this;
+  var G = FP_GRID;
+  // Free space around the grid (in cells), so people at the edge or right in front of the sensor stay visible.
+  var PAD = { side: 1, top: 1.9, bottom: 1.6 };
+  var ctx = canvas.getContext('2d');
+  var css = getComputedStyle(document.documentElement);
+  var data = { zones: {}, targets: [], zoneStates: {}, areas: { ignore: [], outside: [] } };
+  var draft = new Set(), editing = null, mode = null, last = null;
+  var drawnTargets = [], tap = null;
+  self.mirror = false;
+
+  function color(name) { return css.getPropertyValue(name).trim(); }
+
+  function resize() {
+    var w = canvas.clientWidth || 340;
+    var size = w / (G.cols + 2 * PAD.side);
+    var h = Math.round(size * (G.rows + PAD.top + PAD.bottom));
+    var r = window.devicePixelRatio || 1;
+    canvas.style.height = h + 'px';
+    canvas.width = Math.round(w * r);
+    canvas.height = Math.round(h * r);
+    ctx.setTransform(r, 0, 0, r, 0, 0);
+    self.w = w; self.h = h; self.size = size;
+    self.left = PAD.side * size;              // x of the grid's left edge
+    self.base = h - PAD.bottom * size;        // y of the grid's bottom edge (the sensor's wall)
+    render();
+  }
+
+  /* screen position of a cell (mirroring swaps columns) */
+  function cellRect(index) {
+    var col = index % G.cols, row = Math.floor(index / G.cols);
+    if (self.mirror) col = G.cols - 1 - col;
+    return { x: self.left + col * self.size, y: self.base - (row + 1) * self.size, s: self.size };
+  }
+  function cellAt(evt) {
+    var b = canvas.getBoundingClientRect();
+    var col = Math.floor((evt.clientX - b.left - self.left) / self.size);
+    var row = Math.floor((self.base - (evt.clientY - b.top)) / self.size);
+    if (col < 0 || col >= G.cols || row < 0 || row >= G.rows) return null;
+    if (self.mirror) col = G.cols - 1 - col;
+    return row * G.cols + col;
+  }
+  function sx(xcm) { var x = self.mirror ? -xcm : xcm; return self.left + (x - G.xMin) / G.cell * self.size; }
+  function sy(ycm) { return self.base - ycm / G.cell * self.size; }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+  function fillCell(index, style, alpha, inset) {
+    var c = cellRect(index), i = inset || 1.5;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = style;
+    roundRect(c.x + i, c.y + i, c.s - 2 * i, c.s - 2 * i, Math.min(5, c.s / 5));
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawArea(cell, type, strength) {
+    var c = cellRect(cell), i = 1.5;
+    if (type === 'ignore') {
+      fillCell(cell, '#c2352b', Math.min(1, 0.32 * strength));
+    } else {
+      fillCell(cell, color('--ink'), Math.min(1, 0.12 * strength));
+      ctx.save();
+      ctx.beginPath(); ctx.rect(c.x + i, c.y + i, c.s - 2 * i, c.s - 2 * i); ctx.clip();
+      ctx.strokeStyle = color('--muted'); ctx.lineWidth = 1; ctx.globalAlpha = Math.min(1, 0.5 * strength);
+      for (var k = -c.s; k < c.s; k += 6) { ctx.beginPath(); ctx.moveTo(c.x + k, c.y + c.s); ctx.lineTo(c.x + k + c.s, c.y); ctx.stroke(); }
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    if (!self.w) return;
+    var W = self.w, H = self.h;
+    ctx.clearRect(0, 0, W, H);
+
+    var ox = sx(0), oy = self.base;
+
+    // empty cells
+    for (var i = 0; i < G.cols * G.rows; i++) fillCell(i, color('--line'), 0.45, 2.5);
+
+    // metre labels every 2 m on the left edge
+    ctx.fillStyle = color('--muted'); ctx.font = '11px ' + color('--font');
+    for (var m = 2; m <= 10; m += 2) ctx.fillText(m + ' m', self.left + 4, sy(m * 100) + 12);
+
+    // the sensor's own areas: ignore spots (red) and outside the room (hatched)
+    ['outside', 'ignore'].forEach(function (type) {
+      if (editing === 'area:' + type) return;
+      (data.areas[type] || []).forEach(function (cell) { drawArea(cell, type, 1); });
+    });
+
+    // saved zones; the one being edited is drawn from the draft instead
+    Object.keys(data.zones).forEach(function (id) {
+      if (String(id) === String(editing)) return;
+      var z = data.zones[id], c = FP_ZONE_COLORS[(id - 1) % 8], st = data.zoneStates[id] || {};
+      (z.cells || []).forEach(function (cell) { fillCell(cell, c, st.occupied ? 0.75 : 0.4); });
+      label(z.name, z.cells, c);
+    });
+
+    // draft (painting)
+    if (typeof editing === 'string' && editing.indexOf('area:') === 0) {
+      var type = editing.slice(5);
+      draft.forEach(function (cell) { drawArea(cell, type, 1.6); });
+    } else {
+      var draftColor = editing && editing !== 'new' ? FP_ZONE_COLORS[(editing - 1) % 8] : color('--ink');
+      draft.forEach(function (cell) { fillCell(cell, draftColor, 0.95); });
+    }
+
+    // people
+    // people: never drawn off the map; outside the grid they are clamped to the edge and shown with a ring.
+    // Targets on an ignore spot or outside the room are grey: they do not count for zones.
+    drawnTargets = [];
+    data.targets.forEach(function (p) {
+      var rad = Math.max(6, self.size * 0.32);
+      var px = sx(p.x), py = sy(p.y);
+      var cx = Math.min(Math.max(px, rad + 2), W - rad - 2), cy = Math.min(Math.max(py, rad + 2), H - rad - 2);
+      var outside = cx !== px || cy !== py || p.y < 0 || p.y >= G.rows * G.cell || p.x < G.xMin || p.x >= -G.xMin;
+      drawnTargets.push({ t: p, x: cx, y: cy, r: rad });
+      ctx.beginPath(); ctx.arc(cx, cy, rad, 0, 6.29);
+      if (p.ignored) {
+        ctx.fillStyle = color('--paper'); ctx.fill();
+        ctx.strokeStyle = color('--muted'); ctx.lineWidth = 3; ctx.stroke();
+      } else if (outside) {
+        ctx.strokeStyle = color('--target'); ctx.lineWidth = 3; ctx.stroke();
+      } else {
+        ctx.fillStyle = color('--target');
+        ctx.fill();
+        ctx.strokeStyle = color('--paper'); ctx.lineWidth = 2; ctx.stroke();
+      }
+    });
+
+    // sensor, on the wall just below the grid
+    ctx.fillStyle = color('--ink');
+    roundRect(ox - 16, oy + self.size * 0.55, 32, 6, 3); ctx.fill();
+  }
+
+  function label(name, cells, c) {
+    if (!cells || !cells.length) return;
+    // top row of the zone, leftmost cell on screen
+    var best = null;
+    cells.forEach(function (cell) {
+      var r = cellRect(cell);
+      if (!best || r.y < best.y || (r.y === best.y && r.x < best.x)) best = r;
+    });
+    ctx.font = '600 11px ' + color('--font');
+    var tw = ctx.measureText(name).width + 10;
+    var x = Math.min(best.x, self.w - tw - 2), y = Math.max(best.y - 18, 2);
+    ctx.fillStyle = color('--paper'); ctx.globalAlpha = 0.9; roundRect(x, y, tw, 16, 8); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.fillStyle = c; ctx.fillText(name, x + 5, y + 12);
+  }
+
+  /* painting: the first cell decides whether this stroke paints or erases */
+  function apply(cell) {
+    if (cell === null) return;
+    if (mode === 'paint') draft.add(cell); else draft.delete(cell);
+  }
+  function line(a, b) {
+    // walk the grid between two cells so a fast swipe leaves no gaps
+    var ac = a % G.cols, ar = Math.floor(a / G.cols), bc = b % G.cols, br = Math.floor(b / G.cols);
+    var steps = Math.max(Math.abs(bc - ac), Math.abs(br - ar));
+    for (var s = 1; s <= steps; s++) {
+      apply(Math.round(ar + (br - ar) * s / steps) * G.cols + Math.round(ac + (bc - ac) * s / steps));
+    }
+  }
+  function hitTarget(e) {
+    var b = canvas.getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top;
+    for (var i = drawnTargets.length - 1; i >= 0; i--) {
+      var d = drawnTargets[i];
+      if (Math.hypot(d.x - x, d.y - y) <= d.r + 6) return d;
+    }
+    return null;
+  }
+  canvas.addEventListener('pointerdown', function (e) {
+    if (options.onTargetTap) {
+      var hit = hitTarget(e);
+      if (hit) { tap = { t: hit.t, x: e.clientX, y: e.clientY }; return; }
+    }
+    if (!options.paint) return;
+    var cell = cellAt(e);
+    if (cell === null) return;
+    mode = draft.has(cell) ? 'erase' : 'paint';
+    apply(cell); last = cell;
+    canvas.setPointerCapture(e.pointerId);
+    render(); changed();
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    if (!mode) return;
+    var cell = cellAt(e);
+    if (cell === null || cell === last) return;
+    line(last, cell); last = cell;
+    render(); changed();
+  });
+  function end() { mode = null; last = null; }
+  canvas.addEventListener('pointerup', function (e) {
+    if (tap) {
+      var moved = Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 10;
+      var t = tap.t; tap = null;
+      if (!moved) options.onTargetTap(t);
+    }
+    end();
+  });
+  canvas.addEventListener('pointercancel', function () { tap = null; end(); });
+  window.addEventListener('resize', resize);
+
+  function changed() { if (options.onChange) options.onChange(self.getDraft()); }
+
+  self.setData = function (d) {
+    data = { zones: d.zones || {}, targets: d.targets || [], zoneStates: d.zoneStates || {}, areas: d.areas || { ignore: [], outside: [] } };
+    if (!mode) render();
+  };
+  /* editing: slot id of the zone being edited, 'new' for a new zone, null for none */
+  self.edit = function (slot, cells) {
+    editing = slot;
+    draft = new Set(cells || []);
+    render();
+  };
+  self.clear = function () { draft = new Set(); render(); changed(); };
+  self.getDraft = function () { return Array.from(draft).sort(function (a, b) { return a - b; }); };
+  self.cellsAround = function (t) {
+    var col = Math.floor((t.x - G.xMin) / G.cell), row = Math.floor(t.y / G.cell), out = [];
+    // the 2 x 2 cells (1 x 1 m) whose shared corner is nearest to the target
+    var c0 = (t.x - G.xMin) / G.cell - col < 0.5 ? col - 1 : col;
+    var r0 = t.y / G.cell - row < 0.5 ? row - 1 : row;
+    for (var r = r0; r <= r0 + 1; r++) for (var c = c0; c <= c0 + 1; c++) {
+      if (r >= 0 && r < G.rows && c >= 0 && c < G.cols) out.push(r * G.cols + c);
+    }
+    return out;
+  };
+  self.render = render;
+  self.resize = resize;
+  resize();
+}
+
+/*
+ * "Zone is empty after": quick choices plus "Custom" with a number field (0 to 300 seconds,
+ * the range the zone logic accepts). Built once, so typing in the field never loses focus.
+ * onChange(seconds) gets a whole number, or null while the field holds something invalid.
+ */
+function FpTimeoutPicker(seg, field, input, error, labels, onChange) {
+  var PRESETS = [0, 5, 15, 30];
+  var MAX = 300;
+  var custom = false;
+  var buttons = [];
+  seg.innerHTML = '';
+  PRESETS.concat(['custom']).forEach(function (p) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'num';
+    b.textContent = p === 'custom' ? labels.custom : p + ' s';
+    b.addEventListener('click', function () {
+      if (p === 'custom') {
+        custom = true;
+        render();
+        input.focus();
+        report();
+      } else {
+        custom = false;
+        input.value = String(p);
+        render();
+        onChange(p);
+      }
+    });
+    buttons.push({ el: b, value: p });
+    seg.appendChild(b);
+  });
+  input.setAttribute('min', '0');
+  input.setAttribute('max', String(MAX));
+  input.setAttribute('step', '1');
+  input.setAttribute('inputmode', 'numeric');
+  input.addEventListener('input', report);
+
+  function parse() {
+    var raw = String(input.value).trim();
+    if (!/^\d+$/.test(raw)) return null;
+    var n = Number(raw);
+    return n >= 0 && n <= MAX ? n : null;
+  }
+  function report() {
+    var n = parse();
+    error.hidden = n !== null;
+    error.textContent = labels.invalid;
+    input.classList.toggle('invalid', n === null);
+    onChange(n);
+  }
+  function render() {
+    var current = parse();
+    buttons.forEach(function (b) {
+      var on = b.value === 'custom' ? custom : (!custom && current === b.value);
+      b.el.setAttribute('aria-pressed', String(on));
+    });
+    field.hidden = !custom;
+    if (!custom) { error.hidden = true; input.classList.remove('invalid'); }
+  }
+  return {
+    set: function (seconds) {
+      if (document.activeElement === input) return;
+      input.value = String(seconds);
+      custom = PRESETS.indexOf(seconds) < 0;
+      render();
+    },
+  };
+}
+
+/*
+ * FP300 distance strip: 24 blocks of 0.25 m in front of the sensor (0 m at the bottom, 6 m at the top).
+ * Same interface as FpMap (setData, edit, clear, getDraft, render, resize), so pages can swap them.
+ * The block where the sensor measures the nearest person lights up.
+ */
+var FP_BLOCKS = 24, FP_BLOCK = 0.25;
+
+function fpBlockInfo(blocks) {
+  return {
+    count: blocks.length,
+    from: blocks.length ? Math.min.apply(null, blocks) * FP_BLOCK : 0,
+    to: blocks.length ? (Math.max.apply(null, blocks) + 1) * FP_BLOCK : 0,
+  };
+}
+
+function FpRow(canvas, options) {
+  var self = this;
+  var ctx = canvas.getContext('2d');
+  var css = getComputedStyle(document.documentElement);
+  var data = { zones: {}, zoneStates: {}, block: null, presence: null };
+  var draft = new Set(), editing = null, mode = null, last = null, pulse = 0, timer = null;
+  var LANE = 9, LABEL = 40, BOTTOM = 26;
+  self.top = options.topPad || 14;
+  self.mirror = false; // not used for a strip, kept for the same interface
+
+  function color(name) { return css.getPropertyValue(name).trim(); }
+  function zoneBlocks(z) { return z.blocks || z.cells || []; }
+
+  function resize() {
+    var w = canvas.clientWidth || 340;
+    var rowH = Math.max(18, Math.min(26, Math.round(w / 15)));
+    if (options.fitHeight) {
+      // make all 6 m fit in the space the page has left, so nobody has to scroll over the strip
+      var avail = options.fitHeight();
+      if (avail > 0) rowH = Math.max(12, Math.min(26, Math.floor((avail - self.top - BOTTOM) / FP_BLOCKS)));
+    }
+    var h = self.top + FP_BLOCKS * rowH + BOTTOM;
+    var r = window.devicePixelRatio || 1;
+    canvas.style.height = h + 'px';
+    canvas.width = Math.round(w * r); canvas.height = Math.round(h * r);
+    ctx.setTransform(r, 0, 0, r, 0, 0);
+    self.w = w; self.h = h; self.rowH = rowH;
+    render();
+  }
+  function lanesWidth() { return Object.keys(data.zones).length * (LANE + 4); }
+  function blockRect(b) {
+    var x = LABEL, wid = self.w - LABEL - 8 - lanesWidth();
+    return { x: x, y: self.top + (FP_BLOCKS - 1 - b) * self.rowH, w: wid, h: self.rowH };
+  }
+  function blockAt(evt) {
+    var bb = canvas.getBoundingClientRect(), y = evt.clientY - bb.top, x = evt.clientX - bb.left;
+    if (x < LABEL - 10) return null;
+    var b = FP_BLOCKS - 1 - Math.floor((y - self.top) / self.rowH);
+    return b >= 0 && b < FP_BLOCKS ? b : null;
+  }
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+
+  function render() {
+    if (!self.w) return;
+    ctx.clearRect(0, 0, self.w, self.h);
+    var draftColor = editing === 'range' ? color('--radar')
+      : editing && editing !== 'new' ? FP_ZONE_COLORS[(editing - 1) % 8] : color('--ink');
+    ctx.font = '11px ' + color('--font');
+    for (var b = 0; b < FP_BLOCKS; b++) {
+      var r = blockRect(b), on = draft.has(b), here = data.block === b;
+      ctx.globalAlpha = on ? 0.9 : 0.45;
+      ctx.fillStyle = on ? draftColor : color('--line');
+      roundRect(r.x, r.y + 1.5, r.w, r.h - 3, 5); ctx.fill();
+      ctx.globalAlpha = 1;
+      if (here) {
+        // the block where the sensor sees someone: bright outline and a dot, gently pulsing
+        var glow = 0.55 + 0.45 * Math.abs(Math.sin(pulse));
+        ctx.strokeStyle = color('--target'); ctx.lineWidth = 3; ctx.globalAlpha = glow;
+        roundRect(r.x + 1.5, r.y + 3, r.w - 3, r.h - 6, 5); ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.fillStyle = color('--target');
+        ctx.beginPath(); ctx.arc(r.x + r.w / 2, r.y + r.h / 2, Math.min(7, r.h / 3), 0, 6.29); ctx.fill();
+      }
+      if (b % 4 === 0) {
+        ctx.fillStyle = color('--muted');
+        ctx.fillText((b * FP_BLOCK).toFixed(0) + ' m', 4, r.y + r.h + 4);
+      }
+      if (b % 2 === 0 && b % 4 !== 0 && self.rowH >= 16) {
+        ctx.fillStyle = color('--muted'); ctx.globalAlpha = 0.6;
+        ctx.fillText((b * FP_BLOCK).toFixed(1).replace('.', ','), 4, r.y + r.h + 4);
+        ctx.globalAlpha = 1;
+      }
+    }
+    ctx.fillStyle = color('--muted');
+    ctx.fillText('6 m', 4, self.top + 4);
+
+    // other zones as coloured lanes on the right
+    var ids = Object.keys(data.zones), lx = self.w - 8 - lanesWidth();
+    ids.forEach(function (id, i) {
+      var z = data.zones[id], c = FP_ZONE_COLORS[(id - 1) % 8], st = data.zoneStates[id] || {};
+      var x = lx + 4 + i * (LANE + 4);
+      zoneBlocks(z).forEach(function (blk) {
+        var r = blockRect(blk);
+        ctx.globalAlpha = String(id) === String(editing) ? 1 : (st.occupied ? 0.9 : 0.5);
+        ctx.fillStyle = c; roundRect(x, r.y + 1.5, LANE, r.h - 3, 3); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+    });
+
+    // sensor at the bottom
+    ctx.fillStyle = color('--ink');
+    roundRect(LABEL + (self.w - LABEL - 8 - lanesWidth()) / 2 - 16, self.h - BOTTOM + 14, 32, 6, 3); ctx.fill();
+  }
+
+  function apply(b) { if (b === null) return; if (mode === 'paint') draft.add(b); else draft.delete(b); }
+  canvas.addEventListener('pointerdown', function (e) {
+    if (!options.paint) return;
+    var b = blockAt(e); if (b === null) return;
+    mode = draft.has(b) ? 'erase' : 'paint';
+    apply(b); last = b; canvas.setPointerCapture(e.pointerId); render(); changed();
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    if (!mode) return;
+    var b = blockAt(e); if (b === null || b === last) return;
+    var step = b > last ? 1 : -1;
+    for (var k = last + step; k !== b + step; k += step) apply(k);
+    last = b; render(); changed();
+  });
+  function end() { mode = null; last = null; }
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', end);
+  window.addEventListener('resize', resize);
+  function changed() { if (options.onChange) options.onChange(self.getDraft()); }
+
+  function animate() {
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (timer) clearInterval(timer);
+    timer = null;
+    if (data.block !== null && !reduce) timer = setInterval(function () { pulse += 0.25; render(); }, 60);
+  }
+
+  self.setData = function (d) {
+    data = { zones: d.zones || {}, zoneStates: d.zoneStates || {}, block: d.block === undefined ? null : d.block, presence: d.presence };
+    if ((data.block !== null) !== (timer !== null)) animate();
+    if (!mode) render();
+  };
+  self.edit = function (slot, blocks) { editing = slot; draft = new Set(blocks || []); render(); };
+  self.clear = function () { draft = new Set(); render(); changed(); };
+  self.getDraft = function () { return Array.from(draft).sort(function (a, b) { return a - b; }); };
+  self.setPaint = function (on) { options.paint = on; };
+  self.destroy = function () { if (timer) clearInterval(timer); timer = null; };
+  self.render = render;
+  self.resize = resize;
+  resize();
+}
+</script>
+<div class="fp fp-wizard" id="fp">
+  <div class="fp-step-label num" id="stepLabel"></div>
+  <div class="fp-steps" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+
+  <!-- 1 sensor -->
+  <section data-step="1">
+    <h2 data-t="s1_title"></h2>
+    <p data-t="s1_text"></p>
+    <div id="sensors"></div>
+  </section>
+
+  <!-- 2 draw -->
+  <section data-step="2" hidden>
+    <h2 id="s2Title"></h2>
+    <p id="s2Text"></p>
+    <div class="fp-map-bar fp-map-bar-top">
+      <span class="num" id="cellInfo"></span>
+      <button class="fp-link" id="clear" data-t="clear"></button>
+    </div>
+    <div class="fp-map-bar fp-map-bar-top">
+      <span class="fp-live" id="live"><i></i><span id="liveText"></span></span>
+      <label class="fp-switch" id="mirrorWrap"><input type="checkbox" id="mirror"><span data-t="mirror"></span></label>
+    </div>
+    <div class="fp-map-wrap" id="mapWrap"><canvas class="fp-map" id="map"></canvas></div>
+    <div class="fp-map-wrap" id="rowWrap" hidden><canvas class="fp-map" id="row"></canvas></div>
+    <div id="existingWrap" hidden>
+      <p class="fp-note" style="margin-top:16px" data-t="existing"></p>
+      <div class="fp-chips" id="existing"></div>
+    </div>
+  </section>
+
+  <!-- 3 name -->
+  <section data-step="3" hidden>
+    <h2 data-t="s3_title"></h2>
+    <p data-t="s3_text"></p>
+    <div class="fp-field">
+      <label for="name" data-t="name"></label>
+      <input class="fp-input" id="name" maxlength="32" autocomplete="off">
+      <div class="fp-chips" id="suggestions"></div>
+    </div>
+    <div class="fp-field">
+      <label data-t="empty_after"></label>
+      <div class="fp-seg" id="timeouts"></div>
+      <div class="fp-custom" id="customField" hidden>
+        <label for="customSeconds" data-t="custom_label"></label>
+        <div class="fp-custom-row"><input class="fp-input num" id="customSeconds" type="number"><span data-t="seconds"></span></div>
+        <p class="fp-error" id="customError" hidden></p>
+      </div>
+      <p class="fp-note" style="margin-top:8px" data-t="empty_hint"></p>
+    </div>
+  </section>
+
+  <!-- 4 check -->
+  <section data-step="4" hidden>
+    <h2 data-t="s4_title"></h2>
+    <p data-t="s4_text"></p>
+    <dl class="fp-summary num" id="summary"></dl>
+  </section>
+
+  <div class="fp-actions">
+    <button class="fp-btn ghost" id="back" data-t="back"></button>
+    <button class="fp-btn primary" id="next"></button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var FP400_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="59 103 565 565" fill="none" stroke="currentColor" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"> <path d="M311.5 127.8 L310.3 127.2 L309.0 126.6 L307.6 126.0 L306.3 125.6 L304.9 125.1 L303.5 124.7 L302.1 124.4 L300.6 124.1 L299.1 123.9 L297.6 123.8 L296.1 123.7 L294.5 123.6 L292.9 123.6 L291.3 123.6 L289.7 123.7 L288.1 123.9 L286.4 124.1 L284.7 124.4 L283.0 124.7 L281.3 125.1 L279.6 125.5 L277.8 126.0 L276.0 126.5 L274.2 127.1 L272.4 127.7 L270.6 128.4 L268.7 129.1 L266.9 129.9 L265.0 130.8 L263.1 131.7 L261.2 132.6 L259.3 133.6 L257.4 134.7 L255.5 135.8 L253.5 136.9 L251.6 138.1 L249.6 139.4 L247.6 140.7 L245.6 142.0 L243.6 143.4 L241.6 144.8 L239.6 146.3 L237.6 147.9 L235.6 149.4 L233.6 151.1 L231.6 152.7 L229.5 154.5 L227.5 156.2 L225.5 158.0 L223.4 159.9 L221.4 161.8 L219.4 163.7 L217.3 165.7 L215.3 167.7 L213.3 169.7 L211.2 171.8 L209.2 174.0 L207.2 176.2 L205.2 178.4 L203.1 180.6 L201.1 182.9 L199.1 185.2 L197.1 187.6 L195.1 190.0 L193.2 192.4 L191.2 194.8 L189.2 197.3 L187.2 199.9 L185.3 202.4 L183.4 205.0 L181.4 207.6 L179.5 210.2 L177.6 212.9 L175.7 215.6 L173.8 218.3 L172.0 221.0 L170.1 223.8 L168.3 226.6 L166.5 229.4 L164.7 232.2 L162.9 235.1 L161.1 238.0 L159.4 240.9 L157.7 243.8 L155.9 246.7 L154.2 249.6 L152.6 252.6 L150.9 255.6 L149.3 258.6 L147.7 261.6 L146.1 264.6 L144.5 267.6 L143.0 270.6 L141.5 273.7 L140.0 276.7 L138.5 279.8 L137.1 282.8 L135.6 285.9 L134.3 289.0 L132.9 292.0 L131.5 295.1 L130.2 298.2 L128.9 301.3 L127.7 304.3 L126.5 307.4 L125.3 310.5 L124.1 313.6 L122.9 316.6 L121.8 319.7 L120.7 322.8 L119.7 325.8 L118.7 328.8 L117.7 331.9 L116.7 334.9 L115.8 337.9 L114.9 340.9 L114.0 343.9 L113.2 346.9 L112.4 349.8 L111.6 352.8 L110.9 355.7 L110.2 358.6 L109.5 361.5 L108.9 364.4 L108.3 367.3 L107.7 370.1 L107.2 372.9 L106.7 375.7 L106.2 378.5 L105.8 381.2 L105.4 383.9 L105.0 386.6 L104.7 389.3 L104.4 391.9 L104.1 394.6 L103.9 397.1 L103.7 399.7 L103.6 402.2 L103.5 404.7 L103.4 407.2 L103.3 409.6 L103.3 412.0 L103.4 414.4 L103.4 416.7 L103.5 419.0 L103.7 421.2 L103.8 423.5 L104.0 425.6 L104.3 427.8 L104.6 429.9 L104.9 431.9 L105.2 434.0 L105.6 436.0 L106.0 437.9 L106.5 439.8 L107.0 441.7 L107.5 443.5 L108.0 445.2 L108.6 447.0 L109.2 448.6 L109.9 450.3 L110.6 451.9 L111.3 453.4 L112.1 454.9 L112.9 456.4 L113.7 457.8 L114.5 459.1 L115.4 460.4 L116.3 461.7 L117.3 462.9 L118.3 464.0 L119.3 465.1 L120.3 466.2 L121.4 467.2 L122.5 468.2 L123.6 469.1 L124.8 469.9 L126.0 470.7 L127.2 471.5 L128.5 472.2"/> <path d="M128.5 472.2 L194.4 507.2"/> <path d="M311.5 127.8 L377.5 162.9"/> <path d="M297.1 140.9 L293.9 142.1 L290.6 143.5 L287.3 145.1 L283.9 146.8 L280.5 148.7 L277.1 150.8 L273.6 153.0 L270.1 155.3 L266.6 157.8 L263.0 160.5 L259.5 163.3 L255.9 166.2 L252.3 169.3 L248.7 172.5 L245.1 175.9 L241.5 179.4 L237.9 183.0 L234.3 186.7 L230.8 190.5 L227.2 194.5 L223.7 198.6 L220.1 202.8 L216.6 207.1 L213.1 211.5 L209.7 216.0 L206.3 220.6 L202.9 225.2 L199.6 230.0 L196.3 234.8 L193.0 239.7 L272.5 282.0 L275.7 277.1 L279.0 272.2 L282.4 267.5 L285.7 262.8 L289.2 258.2 L292.6 253.7 L296.1 249.3 L299.6 245.0 L302.0 242.2"/> <path d="M362.2 175.4 L297.1 140.9"/> <path d="M296.9 641.0 L300.4 642.7 L304.1 644.1 L307.9 645.2 L311.8 646.0 L315.9 646.5 L320.1 646.8 L324.4 646.7 L328.8 646.4 L333.4 645.7 L338.0 644.8 L342.8 643.6 L347.6 642.0 L352.6 640.2 L357.6 638.2 L362.7 635.8 L367.9 633.2 L373.1 630.2 L378.4 627.0 L383.8 623.6 L389.2 619.9 L394.6 615.9 L400.1 611.6 L405.6 607.2 L411.1 602.4 L416.6 597.5 L422.2 592.3 L427.7 586.8 L433.2 581.2 L438.7 575.3 L444.2 569.3 L449.7 563.0 L455.1 556.6 L460.5 549.9 L465.8 543.1 L471.1 536.2 L476.3 529.0 L481.5 521.8 L486.6 514.3 L491.6 506.8 L496.5 499.1 L501.3 491.3 L506.0 483.5 L510.7 475.5 L515.2 467.4 L519.6 459.3 L523.9 451.1 L528.0 442.8 L532.1 434.5 L535.9 426.2 L539.7 417.9 L543.3 409.5 L546.8 401.1 L550.1 392.8 L553.2 384.4 L556.2 376.1 L559.0 367.8 L561.7 359.6 L564.2 351.4 L566.5 343.3 L568.6 335.3 L570.6 327.4 L572.4 319.5 L573.9 311.8 L575.3 304.2 L576.6 296.7 L577.6 289.3 L578.4 282.1 L579.1 275.0 L579.5 268.1 L579.8 261.4 L579.9 254.8 L579.7 248.5 L579.4 242.3 L578.9 236.3 L578.2 230.5 L577.3 225.0 L576.2 219.6 L574.9 214.5 L573.5 209.7 L571.8 205.0 L570.0 200.7 L568.0 196.5 L565.8 192.6 L563.4 189.0 L560.9 185.7 L558.2 182.6 L555.3 179.8 L552.3 177.3 L549.1 175.0 L545.7 173.1 L542.2 171.4 L538.6 170.0 L534.8 168.9 L530.8 168.1 L526.8 167.5 L522.6 167.3 L518.3 167.4 L513.8 167.7 L509.3 168.4 L504.6 169.3 L499.8 170.5 L495.0 172.0 L490.1 173.8 L485.0 175.9 L479.9 178.3 L474.7 180.9 L469.5 183.8 L464.2 187.0 L458.8 190.5 L453.4 194.2 L448.0 198.2 L442.5 202.4 L437.0 206.9 L431.5 211.6 L426.0 216.6 L420.5 221.8 L414.9 227.2 L409.4 232.9 L403.9 238.7 L398.4 244.8 L392.9 251.1 L387.5 257.5 L382.1 264.1 L376.8 270.9 L371.5 277.9 L366.3 285.0 L361.1 292.3 L356.1 299.7 L351.1 307.3 L346.1 315.0 L341.3 322.7 L336.6 330.6 L332.0 338.6 L327.4 346.7 L323.0 354.8 L318.8 363.0 L314.6 371.2 L310.6 379.5 L306.7 387.9 L302.9 396.2 L299.3 404.6 L295.9 412.9 L292.6 421.3 L289.4 429.6 L286.4 438.0 L283.6 446.2 L280.9 454.5 L278.4 462.6 L276.1 470.8 L274.0 478.8 L272.0 486.7 L270.3 494.6 L268.7 502.3 L267.3 509.9 L266.1 517.4 L265.0 524.8 L264.2 532.0 L263.6 539.1 L263.1 546.0 L262.8 552.7 L262.8 559.2 L262.9 565.6 L263.2 571.8 L263.7 577.8 L264.4 583.5 L265.3 589.1 L266.4 594.4 L267.7 599.5 L269.1 604.4 L270.8 609.0 L272.6 613.4 L274.6 617.6 L276.8 621.4 L279.2 625.0 L281.7 628.4 L284.4 631.5 L287.3 634.3 L290.4 636.8 L293.5 639.1 L296.9 641.0"/> <path d="M476.9 136.4 L475.1 135.6 L473.3 134.8 L471.5 134.0 L469.7 133.4 L467.8 132.8 L465.9 132.3 L463.9 131.8 L462.0 131.4 L459.9 131.1 L457.9 130.9 L455.8 130.8 L453.7 130.7 L451.6 130.7 L449.4 130.7 L447.2 130.9 L444.9 131.1 L442.7 131.4 L440.4 131.7 L438.1 132.2 L435.7 132.7 L433.4 133.3 L431.0 133.9 L428.6 134.6 L426.1 135.4 L423.7 136.3 L421.2 137.2 L418.7 138.2 L416.2 139.3 L413.6 140.4 L411.0 141.7 L408.5 142.9 L405.9 144.3 L403.3 145.7 L400.6 147.2 L398.0 148.8 L395.3 150.4 L392.7 152.1 L390.0 153.9 L387.3 155.7 L384.6 157.6 L381.9 159.6 L379.1 161.6 L376.4 163.7 L373.7 165.8 L370.9 168.0 L368.2 170.3 L365.4 172.6 L362.7 175.0 L359.9 177.5 L357.1 180.0 L354.4 182.6 L351.6 185.2 L348.8 187.9 L346.1 190.6 L343.3 193.4 L340.5 196.3 L337.8 199.2 L335.0 202.1 L332.3 205.1 L329.5 208.2 L326.8 211.3 L324.1 214.4 L321.4 217.6 L318.7 220.9 L316.0 224.2 L313.3 227.5 L310.6 230.9 L307.9 234.3 L305.3 237.8 L302.6 241.3 L300.0 244.8 L297.4 248.4 L294.8 252.0 L292.3 255.7 L289.7 259.4 L287.2 263.1 L284.7 266.9 L282.2 270.7 L279.7 274.5 L277.3 278.3 L274.8 282.2 L272.4 286.1 L270.1 290.0 L267.7 294.0 L265.4 298.0 L263.1 302.0 L260.8 306.0 L258.6 310.0 L256.4 314.1 L254.2 318.2 L252.0 322.3 L249.9 326.4 L247.8 330.5 L245.7 334.6 L243.7 338.8 L241.7 342.9 L239.7 347.1 L237.8 351.2 L235.9 355.4 L234.1 359.6 L232.2 363.8 L230.5 368.0 L228.7 372.1 L227.0 376.3 L225.3 380.5 L223.7 384.7 L222.1 388.9 L220.5 393.0 L219.0 397.2 L217.5 401.3 L216.1 405.5 L214.7 409.6 L213.4 413.7 L212.1 417.9 L210.8 421.9 L209.6 426.0 L208.4 430.1 L207.3 434.1 L206.2 438.2 L205.1 442.2 L204.1 446.1 L203.2 450.1 L202.3 454.0 L201.4 457.9 L200.6 461.8 L199.8 465.7 L199.1 469.5 L198.4 473.3 L197.8 477.1 L197.2 480.8 L196.7 484.5 L196.2 488.2 L195.7 491.8 L195.3 495.4 L195.0 498.9 L194.7 502.4 L194.4 505.9 L194.2 509.3 L194.1 512.7 L194.0 516.1 L193.9 519.4 L193.9 522.6 L193.9 525.8 L194.0 529.0 L194.2 532.1 L194.3 535.2 L194.6 538.2 L194.9 541.2 L195.2 544.1 L195.6 546.9 L196.0 549.7 L196.5 552.5 L197.0 555.2 L197.5 557.8 L198.2 560.4 L198.8 562.9 L199.5 565.4 L200.3 567.8 L201.1 570.1 L201.9 572.4 L202.8 574.6 L203.8 576.8 L204.7 578.9 L205.8 580.9 L206.8 582.9 L208.0 584.8 L209.1 586.7 L210.3 588.4 L211.6 590.1 L212.9 591.8 L214.2 593.3 L215.6 594.9 L217.0 596.3 L218.4 597.7 L219.9 599.0 L221.5 600.2 L223.1 601.3 L224.7 602.4 L226.3 603.5 L228.0 604.4"/> <path d="M228.0 604.4 L296.9 641.0"/> <path d="M476.9 136.4 L545.7 173.1"/> <path d="M540.4 171.0 L509.5 223.5 L509.5 223.5 L508.5 225.5 L507.8 227.6 L507.3 229.8 L507.1 232.0 L507.3 234.2 L507.7 236.4 L508.4 238.5 L509.4 240.5 L510.6 242.4 L512.0 244.1 L513.7 245.6 L515.5 246.8 L517.5 247.8 L519.6 248.5 L521.8 249.0 L524.0 249.2 L526.2 249.0 L528.4 248.6 L530.5 247.9 L532.5 247.0 L534.4 245.7 L536.1 244.3 L537.6 242.6 L538.8 240.8 L538.8 240.8 L569.7 188.2"/> </svg>';
+
+  var FP300_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="124 133 546 546" fill="none" stroke="currentColor" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"> <path d="M204.5 505.1 L206.8 506.2 L209.2 507.2 L211.7 507.9 L214.3 508.4 L217.0 508.8 L219.8 508.9 L222.7 508.9 L225.6 508.7 L228.7 508.2 L231.8 507.6 L234.9 506.8 L236.8 506.2"/> <path d="M388.7 220.5 L388.1 218.6 L387.1 215.6 L385.8 212.6 L384.5 209.9 L383.0 207.3 L381.5 204.9 L379.8 202.7 L378.0 200.7 L376.1 198.8 L374.1 197.1 L371.9 195.6 L369.7 194.3 L367.4 193.2 L365.0 192.3 L362.4 191.5 L359.8 191.0 L357.1 190.7 L354.3 190.5 L351.5 190.5 L348.5 190.8 L345.5 191.2 L342.4 191.8 L339.2 192.6 L336.0 193.6 L332.7 194.8 L329.4 196.2 L326.0 197.8 L322.6 199.5 L319.1 201.5 L315.6 203.6 L312.0 205.9 L308.4 208.4 L304.8 211.0 L301.2 213.8 L297.5 216.8 L293.9 219.9 L290.2 223.2 L286.5 226.7 L282.8 230.3 L279.2 234.0 L275.5 237.9 L271.9 242.0 L268.2 246.1 L264.6 250.4 L261.1 254.8 L257.5 259.3 L254.0 264.0 L250.5 268.7 L247.1 273.5 L243.7 278.5 L240.4 283.5 L237.2 288.6 L234.0 293.7 L230.8 299.0 L227.7 304.3 L224.7 309.6 L221.8 315.0 L219.0 320.5 L216.2 325.9 L213.5 331.4 L211.0 337.0 L208.5 342.5 L206.1 348.1 L203.8 353.6 L201.6 359.2 L199.5 364.7 L197.5 370.3 L195.6 375.8 L193.9 381.2 L192.2 386.6 L190.7 392.0 L189.2 397.4 L187.9 402.6 L186.8 407.8 L185.7 413.0 L184.8 418.0 L184.0 423.0 L183.3 427.9 L182.7 432.7 L182.3 437.4 L182.0 442.0 L181.8 446.5 L181.8 450.8 L181.9 455.0 L182.1 459.1 L182.4 463.1 L182.9 466.9 L183.5 470.6 L184.2 474.2 L185.1 477.6 L186.0 480.8 L187.1 483.9 L188.3 486.8 L189.7 489.5 L191.1 492.1 L192.7 494.5 L194.4 496.7 L196.2 498.8 L198.1 500.6 L200.1 502.3 L202.2 503.8 L204.5 505.1"/> <path d="M332.6 174.6 L331.5 174.0 L330.3 173.5 L329.1 173.0 L327.9 172.6 L326.6 172.2 L325.4 171.8 L324.1 171.5 L322.7 171.3 L321.4 171.1 L320.0 170.9 L318.7 170.8 L317.3 170.8 L315.8 170.8 L314.4 170.8 L312.9 170.9 L311.4 171.1 L309.9 171.2 L308.4 171.5 L306.9 171.8 L305.3 172.1 L303.7 172.5 L302.2 172.9 L300.6 173.4 L298.9 173.9 L297.3 174.5 L295.7 175.1 L294.0 175.8 L292.3 176.5 L290.6 177.3 L288.9 178.1 L287.2 178.9 L285.5 179.8 L283.7 180.8 L282.0 181.8 L280.2 182.8 L278.5 183.9 L276.7 185.0 L274.9 186.2 L273.1 187.4 L271.3 188.7 L269.5 190.0 L267.7 191.3 L265.9 192.7 L264.1 194.1 L262.3 195.6 L260.4 197.1 L258.6 198.6 L256.8 200.2 L255.0 201.9 L253.1 203.5 L251.3 205.2 L249.4 207.0 L247.6 208.8 L245.8 210.6 L243.9 212.4 L242.1 214.3 L240.3 216.3 L238.4 218.2 L236.6 220.2 L234.8 222.2 L233.0 224.3 L231.2 226.4 L229.4 228.5 L227.6 230.7 L225.8 232.9 L224.0 235.1 L222.2 237.3 L220.4 239.6 L218.7 241.9 L216.9 244.2 L215.2 246.6 L213.5 249.0 L211.7 251.4 L210.0 253.8 L208.3 256.3 L206.7 258.7 L205.0 261.2 L203.3 263.7 L201.7 266.3 L200.1 268.8 L198.5 271.4 L196.9 274.0 L195.3 276.6 L193.7 279.2 L192.2 281.9 L190.7 284.5 L189.1 287.2 L187.7 289.9 L186.2 292.6 L184.7 295.3 L183.3 298.0 L181.9 300.7 L180.5 303.5 L179.1 306.2 L177.8 309.0 L176.5 311.7 L175.1 314.5 L173.9 317.3 L172.6 320.0 L171.4 322.8 L170.2 325.6 L169.0 328.4 L167.8 331.1 L166.7 333.9 L165.6 336.7 L164.5 339.5 L163.4 342.2 L162.4 345.0 L161.4 347.8 L160.4 350.5 L159.5 353.3 L158.5 356.0 L157.6 358.8 L156.8 361.5 L155.9 364.2 L155.1 366.9 L154.3 369.6 L153.6 372.3 L152.9 375.0 L152.2 377.6 L151.5 380.3 L150.9 382.9 L150.3 385.5 L149.7 388.1 L149.1 390.7 L148.6 393.3 L148.1 395.8 L147.7 398.3 L147.3 400.8 L146.9 403.3 L146.5 405.8 L146.2 408.2 L145.9 410.6 L145.7 413.0 L145.4 415.3 L145.2 417.7 L145.1 420.0 L144.9 422.3 L144.8 424.5 L144.8 426.7 L144.7 428.9 L144.7 431.1 L144.7 433.2 L144.8 435.3 L144.9 437.4 L145.0 439.4 L145.2 441.4 L145.3 443.4 L145.6 445.3 L145.8 447.2 L146.1 449.1 L146.4 450.9 L146.7 452.7 L147.1 454.5 L147.5 456.2 L148.0 457.8 L148.4 459.5 L148.9 461.1 L149.5 462.6 L150.0 464.2 L150.6 465.6 L151.2 467.1 L151.9 468.5 L152.6 469.8 L153.3 471.1 L154.0 472.4 L154.8 473.6 L155.6 474.8 L156.4 475.9 L157.3 477.0 L158.2 478.1 L159.1 479.1 L160.0 480.0 L161.0 480.9 L162.0 481.8 L163.0 482.6 L164.1 483.4 L165.1 484.1 L166.2 484.8 L167.4 485.4"/> <path d="M167.4 485.4 L204.5 505.1"/> <path d="M332.6 174.6 L369.7 194.3"/> <path d="M347.2 236.7 L346.3 236.3 L345.5 235.9 L344.6 235.5 L343.7 235.2 L342.8 234.9 L341.9 234.7 L340.9 234.5 L340.0 234.3 L339.0 234.1 L338.0 234.0 L337.0 234.0 L336.0 233.9 L335.0 233.9 L333.9 234.0 L332.8 234.0 L331.8 234.1 L330.7 234.3 L329.6 234.4 L328.4 234.6 L327.3 234.9 L326.2 235.2 L325.0 235.5 L323.9 235.8 L322.7 236.2 L321.5 236.6 L320.3 237.1 L319.1 237.6 L317.9 238.1 L316.6 238.6 L315.4 239.2 L314.1 239.8 L312.9 240.5 L311.6 241.2 L310.4 241.9 L309.1 242.7 L307.8 243.4 L306.5 244.3 L305.2 245.1 L303.9 246.0 L302.6 246.9 L301.3 247.9 L300.0 248.8 L298.7 249.8 L297.3 250.9 L296.0 252.0 L294.7 253.1 L293.4 254.2 L292.0 255.3 L290.7 256.5 L289.3 257.7 L288.0 259.0 L286.7 260.2 L285.3 261.5 L284.0 262.9 L282.7 264.2 L281.3 265.6 L280.0 267.0 L278.7 268.4 L277.3 269.9 L276.0 271.4 L274.7 272.9 L273.4 274.4 L272.1 275.9 L270.8 277.5 L269.5 279.1 L268.2 280.7 L266.9 282.3 L265.6 284.0 L264.3 285.7 L263.0 287.3 L261.8 289.1 L260.5 290.8 L259.3 292.5 L258.0 294.3 L256.8 296.1 L255.6 297.9 L254.4 299.7 L253.1 301.5 L252.0 303.4 L250.8 305.2 L249.6 307.1 L248.4 309.0 L247.3 310.9 L246.2 312.8 L245.0 314.7 L243.9 316.7 L242.8 318.6 L241.7 320.6 L240.7 322.5 L239.6 324.5 L238.6 326.5 L237.5 328.4 L236.5 330.4 L235.5 332.4 L234.6 334.4 L233.6 336.4 L232.6 338.4 L231.7 340.5 L230.8 342.5 L229.9 344.5 L229.0 346.5 L228.2 348.5 L227.3 350.5 L226.5 352.6 L225.7 354.6 L224.9 356.6 L224.1 358.6 L223.4 360.6 L222.6 362.6 L221.9 364.7 L221.2 366.7 L220.6 368.7 L219.9 370.6 L219.3 372.6 L218.7 374.6 L218.1 376.6 L217.5 378.5 L217.0 380.5 L216.4 382.4 L215.9 384.4 L215.4 386.3 L215.0 388.2 L214.5 390.1 L214.1 392.0 L213.7 393.9 L213.4 395.7 L213.0 397.6 L212.7 399.4 L212.4 401.2 L212.1 403.0 L211.8 404.8 L211.6 406.6 L211.4 408.3 L211.2 410.1 L211.0 411.8 L210.9 413.5 L210.8 415.2 L210.7 416.8 L210.6 418.5 L210.5 420.1 L210.5 421.7 L210.5 423.2 L210.5 424.8 L210.6 426.3 L210.6 427.8 L210.7 429.3 L210.8 430.8 L211.0 432.2 L211.1 433.6 L211.3 435.0 L211.5 436.3 L211.7 437.7 L212.0 439.0 L212.3 440.2 L212.6 441.5 L212.9 442.7 L213.2 443.9 L213.6 445.1 L214.0 446.2 L214.4 447.3 L214.8 448.4 L215.3 449.4 L215.7 450.4 L216.2 451.4 L216.8 452.4 L217.3 453.3 L217.9 454.2 L218.4 455.0 L219.0 455.8 L219.7 456.6 L220.3 457.4 L221.0 458.1 L221.7 458.8 L222.4 459.5 L223.1 460.1 L223.8 460.7 L224.6 461.3 L225.4 461.8 L226.2 462.3 L227.0 462.7"/> <path d="M471.3 638.0 L473.6 639.0 L475.9 639.9 L478.3 640.6 L480.8 641.1 L483.3 641.5 L486.0 641.6 L488.7 641.6 L491.6 641.3 L494.4 640.9 L497.4 640.3 L500.4 639.6 L503.5 638.6 L506.6 637.5 L509.8 636.1 L513.0 634.6 L516.3 633.0 L519.7 631.1 L523.0 629.1 L526.4 626.9 L529.8 624.5 L533.3 622.0 L536.7 619.3 L540.2 616.5 L543.7 613.5 L547.2 610.3 L550.7 607.0 L554.2 603.6 L557.7 600.0 L561.2 596.3 L564.7 592.5 L568.2 588.5 L571.6 584.4 L575.0 580.2 L578.4 575.9 L581.8 571.5 L585.1 567.0 L588.3 562.3 L591.6 557.6 L594.7 552.9 L597.9 548.0 L600.9 543.1 L603.9 538.1 L606.8 533.0 L609.7 527.9 L612.5 522.7 L615.2 517.5 L617.9 512.3 L620.4 507.1 L622.9 501.8 L625.3 496.5 L627.5 491.2 L629.7 485.9 L631.8 480.6 L633.8 475.3 L635.7 470.0 L637.5 464.8 L639.2 459.5 L640.8 454.4 L642.2 449.2 L643.6 444.1 L644.8 439.1 L646.0 434.1 L647.0 429.2 L647.9 424.4 L648.6 419.6 L649.3 415.0 L649.8 410.4 L650.2 405.9 L650.5 401.6 L650.7 397.3 L650.7 393.1 L650.6 389.1 L650.4 385.2 L650.1 381.4 L649.7 377.7 L649.1 374.2 L648.4 370.8 L647.6 367.6 L646.7 364.5 L645.6 361.6 L644.5 358.8 L643.2 356.2 L641.8 353.7 L640.3 351.4 L638.7 349.3 L637.0 347.3 L635.2 345.6 L633.2 344.0 L631.2 342.5 L629.1 341.3 L626.9 340.2 L624.5 339.3 L622.1 338.6 L619.6 338.1 L617.1 337.8 L614.4 337.6 L611.7 337.7 L608.8 337.9 L606.0 338.3 L603.0 338.9 L600.0 339.7 L596.9 340.6 L593.8 341.8 L590.6 343.1 L587.4 344.6 L584.1 346.3 L580.8 348.1 L577.4 350.1 L574.0 352.3 L570.6 354.7 L567.1 357.2 L563.7 359.9 L560.2 362.7 L556.7 365.7 L553.2 368.9 L549.7 372.2 L546.2 375.6 L542.7 379.2 L539.2 382.9 L535.7 386.8 L532.2 390.7 L528.8 394.8 L525.4 399.0 L522.0 403.3 L518.6 407.8 L515.3 412.3 L512.1 416.9 L508.8 421.6 L505.7 426.4 L502.5 431.2 L499.5 436.2 L496.5 441.2 L493.6 446.2 L490.7 451.3 L487.9 456.5 L485.2 461.7 L482.6 466.9 L480.0 472.2 L477.5 477.5 L475.2 482.8 L472.9 488.1 L470.7 493.4 L468.6 498.7 L466.6 504.0 L464.7 509.2 L462.9 514.5 L461.2 519.7 L459.6 524.9 L458.2 530.0 L456.8 535.1 L455.6 540.1 L454.4 545.1 L453.4 550.0 L452.6 554.8 L451.8 559.6 L451.1 564.3 L450.6 568.8 L450.2 573.3 L449.9 577.7 L449.7 582.0 L449.7 586.1 L449.8 590.2 L450.0 594.1 L450.3 597.9 L450.7 601.5 L451.3 605.0 L452.0 608.4 L452.8 611.7 L453.7 614.7 L454.8 617.7 L455.9 620.5 L457.2 623.1 L458.6 625.5 L460.1 627.8 L461.7 629.9 L463.4 631.9 L465.3 633.7 L467.2 635.3 L469.2 636.7 L471.3 638.0"/> <path d="M408.3 223.9 L407.2 223.4 L406.1 222.9 L405.0 222.4 L403.8 222.0 L402.6 221.6 L401.4 221.3 L400.2 221.0 L398.9 220.8 L397.6 220.6 L396.3 220.4 L395.0 220.3 L393.7 220.3 L392.3 220.3 L390.9 220.3 L389.5 220.4 L388.1 220.5 L386.7 220.7 L385.2 220.9 L383.8 221.2 L382.3 221.5 L380.8 221.9 L379.3 222.3 L377.7 222.8 L376.2 223.3 L374.6 223.8 L373.0 224.4 L371.5 225.0 L369.9 225.7 L368.2 226.5 L366.6 227.2 L365.0 228.0 L363.3 228.9 L361.7 229.8 L360.0 230.8 L358.3 231.7 L356.7 232.8 L355.0 233.9 L353.3 235.0 L351.6 236.1 L349.8 237.3 L348.1 238.6 L346.4 239.9 L344.7 241.2 L342.9 242.5 L341.2 243.9 L339.4 245.4 L337.7 246.9 L335.9 248.4 L334.2 249.9 L332.4 251.5 L330.7 253.2 L328.9 254.8 L327.2 256.5 L325.4 258.3 L323.7 260.0 L321.9 261.8 L320.2 263.7 L318.4 265.6 L316.7 267.5 L314.9 269.4 L313.2 271.4 L311.5 273.4 L309.8 275.4 L308.0 277.5 L306.3 279.5 L304.6 281.7 L302.9 283.8 L301.2 286.0 L299.6 288.2 L297.9 290.4 L296.2 292.6 L294.6 294.9 L292.9 297.2 L291.3 299.5 L289.7 301.9 L288.1 304.2 L286.5 306.6 L284.9 309.0 L283.4 311.4 L281.8 313.9 L280.3 316.3 L278.7 318.8 L277.2 321.3 L275.8 323.8 L274.3 326.3 L272.8 328.9 L271.4 331.4 L270.0 334.0 L268.6 336.5 L267.2 339.1 L265.8 341.7 L264.4 344.3 L263.1 346.9 L261.8 349.6 L260.5 352.2 L259.3 354.8 L258.0 357.5 L256.8 360.1 L255.6 362.7 L254.4 365.4 L253.3 368.0 L252.1 370.7 L251.0 373.3 L249.9 376.0 L248.9 378.6 L247.8 381.3 L246.8 383.9 L245.8 386.6 L244.9 389.2 L243.9 391.9 L243.0 394.5 L242.2 397.1 L241.3 399.7 L240.5 402.3 L239.7 404.9 L238.9 407.5 L238.1 410.1 L237.4 412.6 L236.7 415.2 L236.1 417.7 L235.4 420.3 L234.8 422.8 L234.3 425.3 L233.7 427.7 L233.2 430.2 L232.7 432.6 L232.2 435.1 L231.8 437.5 L231.4 439.9 L231.0 442.2 L230.7 444.6 L230.4 446.9 L230.1 449.2 L229.9 451.5 L229.6 453.7 L229.5 455.9 L229.3 458.1 L229.2 460.3 L229.1 462.5 L229.0 464.6 L229.0 466.7 L229.0 468.7 L229.0 470.8 L229.0 472.8 L229.1 474.8 L229.2 476.7 L229.4 478.6 L229.6 480.5 L229.8 482.3 L230.0 484.2 L230.3 485.9 L230.6 487.7 L230.9 489.4 L231.3 491.1 L231.7 492.7 L232.1 494.3 L232.5 495.9 L233.0 497.4 L233.5 498.9 L234.0 500.3 L234.6 501.7 L235.2 503.1 L235.8 504.4 L236.5 505.7 L237.2 507.0 L237.9 508.2 L238.6 509.3 L239.4 510.5 L240.2 511.5 L241.0 512.6 L241.8 513.6 L242.7 514.5 L243.6 515.4 L244.5 516.3 L245.5 517.1 L246.4 517.9 L247.4 518.7 L248.5 519.3 L249.5 520.0 L250.6 520.6"/> <path d="M250.6 520.6 L471.3 638.0"/> <path d="M408.3 223.9 L629.1 341.3"/> <path d="M560.7 347.8 L551.8 394.9 L551.8 394.9 L551.6 397.0 L551.6 399.1 L551.9 401.2 L552.4 403.2 L553.2 405.1 L554.3 406.9 L555.6 408.6 L557.1 410.0 L558.8 411.3 L560.6 412.3 L562.5 413.1 L564.6 413.6 L566.6 413.9 L568.7 413.9 L570.8 413.6 L572.8 413.0 L574.7 412.2 L576.5 411.1 L578.2 409.8 L579.7 408.3 L580.9 406.7 L581.9 404.8 L582.7 402.9 L583.2 400.9 L583.2 400.9 L592.2 353.7"/> </svg>';
+  var state = { step: 1, sensors: [], sensor: null, cells: [], existingSlot: null, name: '', timeout: 5 };
+  var pollTimer = null;
+  var $ = function (id) { return document.getElementById(id); };
+  var t = function (key, tokens) { return Homey.__('wizard.' + key, tokens); };
+  // iOS only shows :active styles when the page listens to touches
+  document.addEventListener('touchstart', function () {}, { passive: true });
+
+  // Look: follow Homey (or the choice in the app settings) and use the full height of the sheet.
+  var themePref = 'auto', themeLogged = false;
+  var rerunTheme = fpWatchTheme(function () { return themePref; }, function (info) {
+    if (typeof map !== 'undefined' && map) map.render();
+    if (!themeLogged && info) {
+      themeLogged = true;
+      setTimeout(function () { Homey.emit('theme_debug', fpTheme(themePref)).catch(function () {}); }, 1200);
+    }
+  });
+  Homey.emit('get_theme').then(function (p) { themePref = p || 'auto'; rerunTheme(); }).catch(function () {});
+  function fit() {
+    var top = $('fp').getBoundingClientRect().top + window.scrollY;
+    $('fp').style.minHeight = Math.max(0, window.innerHeight - top - 12) + 'px';
+  }
+  fit();
+  window.addEventListener('resize', fit);
+  window.addEventListener('load', fit);
+  setTimeout(fit, 300);
+
+  document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
+  Homey.setTitle(t('title'));
+
+  var editorOptions = {
+    paint: true,
+    onChange: function (cells) { state.cells = cells; renderCellInfo(); update(); },
+  };
+  var mapEditor = new FpMap($('map'), editorOptions);   // FP400: grid of 0.5 m cells
+  var rowEditor = new FpRow($('row'), {
+    paint: true,
+    onChange: editorOptions.onChange,
+    // all 24 blocks fit between the strip's top and the buttons at the bottom
+    fitHeight: function () {
+      var top = $('row').getBoundingClientRect().top + window.scrollY;
+      var actions = document.querySelector('.fp-actions');
+      return window.innerHeight - top - (actions ? actions.offsetHeight : 70) - 14;
+    },
+  });   // FP300: strip of 0.25 m distance blocks
+  var map = mapEditor;
+  function isFp300() { return state.sensor && state.sensor.kind === 'fp300'; }
+  function useEditor() {
+    map = isFp300() ? rowEditor : mapEditor;
+    $('mapWrap').hidden = isFp300();
+    $('rowWrap').hidden = !isFp300();
+    $('mirrorWrap').hidden = isFp300();
+    $('s2Title').textContent = t(isFp300() ? 's2_title_fp300' : 's2_title');
+    $('s2Text').textContent = t(isFp300() ? 's2_text_fp300' : 's2_text');
+  }
+  $('clear').addEventListener('click', function () { map.clear(); });
+
+  function m(v) { return String(Math.round(v * 100) / 100).replace('.', ','); }
+  function renderCellInfo() {
+    if (isFp300()) {
+      var bi = fpBlockInfo(state.cells);
+      $('cellInfo').textContent = bi.count ? t(bi.count === 1 ? 'blocks_one' : 'blocks', { count: bi.count, from: m(bi.from), to: m(bi.to) }) : t('cells_none');
+      $('clear').hidden = !bi.count;
+      return;
+    }
+    var info = fpCellInfo(state.cells);
+    $('cellInfo').textContent = info.count ? t(info.count === 1 ? 'cells_one' : 'cells', { count: info.count, area: m(info.area) }) : t('cells_none');
+    $('clear').hidden = !info.count;
+  }
+  $('mirror').addEventListener('change', function () { map.mirror = this.checked; map.render(); });
+
+  /* ---------- step 1 */
+  function renderSensors() {
+    var box = $('sensors');
+    box.innerHTML = '';
+    if (!state.sensors.length) {
+      box.innerHTML = '<div class="fp-empty">' + t('no_sensor') + '</div>';
+      return;
+    }
+    state.sensors.forEach(function (s) {
+      var b = document.createElement('button');
+      b.className = 'fp-choice';
+      b.setAttribute('aria-pressed', state.sensor === s ? 'true' : 'false');
+      var free = s.zones.filter(function (z) { return !z.added; }).length;
+      var sub = s.zones.length === 1 ? t('zone_one') : s.zones.length ? t('zone_count', { count: s.zones.length }) : t('zone_none');
+      if (free) sub += ', ' + t('zone_free', { count: free });
+      b.innerHTML = (s.kind === 'fp300' ? FP300_ICON : FP400_ICON) + '<span><strong></strong><small></small></span>';
+      b.querySelector('strong').textContent = s.name;
+      b.querySelector('small').textContent = sub;
+      b.addEventListener('click', function () {
+        if (state.sensor !== s) { state.cells = []; state.existingSlot = null; }
+        state.sensor = s; renderSensors(); update();
+      });
+      box.appendChild(b);
+    });
+  }
+
+  /* ---------- step 2 */
+  function renderExisting() {
+    var free = state.sensor.zones.filter(function (z) { return !z.added; });
+    $('existingWrap').hidden = !free.length;
+    var box = $('existing');
+    box.innerHTML = '';
+    free.forEach(function (z) {
+      var c = document.createElement('button');
+      c.className = 'fp-chip';
+      c.dataset.slot = z.slot;
+      c.textContent = z.name;
+      c.addEventListener('click', function () {
+        var again = state.existingSlot === z.slot;
+        state.existingSlot = again ? null : z.slot;
+        state.cells = again ? [] : (z.cells || z.blocks || []).slice();
+        if (!again) { state.name = z.name; state.timeout = z.absence_timeout; }
+        map.edit(again ? 'new' : z.slot, state.cells);
+        markExisting(); renderCellInfo(); update();
+      });
+      box.appendChild(c);
+    });
+  }
+  function markExisting() {
+    document.querySelectorAll('#existing .fp-chip').forEach(function (c) {
+      c.setAttribute('aria-pressed', String(Number(c.dataset.slot) === state.existingSlot));
+    });
+  }
+
+  function poll() {
+    if (document.hidden) return;
+    Homey.emit('get_state', { token: state.sensor.token }).then(function (live) {
+      map.setData(live);
+      if (live.kind === 'fp300') {
+        var known = live.presence && live.block !== null && live.block !== undefined;
+        $('live').classList.toggle('on', !!known);
+        $('liveText').textContent = known
+          ? t('live_fp300', { distance: m(live.distance), age: live.distanceAge === null ? '?' : live.distanceAge })
+          : live.pirOnly ? t('live_fp300_pir')
+          : live.tracking === 'waiting' ? t('live_fp300_waiting')
+          : t(live.presence ? 'live_fp300_far' : 'live_fp300_off');
+        return;
+      }
+      $('live').classList.toggle('on', live.fresh);
+      $('liveText').textContent = live.fresh ? t('live_on', { count: live.targets.length }) : t('live_off');
+    }).catch(function () {});
+  }
+  function startPolling() { stopPolling(); poll(); pollTimer = setInterval(poll, 1000); }
+  function stopPolling() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
+
+  /* ---------- step 3 */
+  function renderNaming() {
+    $('name').value = state.name;
+    var sug = $('suggestions');
+    sug.innerHTML = '';
+    t('suggestions').split(',').forEach(function (s) {
+      var c = document.createElement('button');
+      c.className = 'fp-chip';
+      c.textContent = s.trim();
+      c.setAttribute('aria-pressed', String(state.name === s.trim()));
+      c.addEventListener('click', function () { state.name = s.trim(); renderNaming(); update(); });
+      sug.appendChild(c);
+    });
+    timeoutPicker.set(state.timeout);
+  }
+  var timeoutPicker = new FpTimeoutPicker($('timeouts'), $('customField'), $('customSeconds'), $('customError'),
+    { custom: t('custom'), invalid: t('custom_invalid') },
+    function (seconds) { state.timeout = seconds; update(); });
+  $('name').addEventListener('input', function () { state.name = this.value; update(); });
+
+  /* ---------- step 4 */
+  function renderSummary() {
+    var info = isFp300() ? fpBlockInfo(state.cells) : fpCellInfo(state.cells);
+    var size = isFp300()
+      ? String(info.count)
+      : t(info.count === 1 ? 'cells_one' : 'cells', { count: info.count, area: m(info.area) });
+    var rows = [
+      [t('sum_sensor'), state.sensor.name],
+      [t('sum_name'), state.name.trim()],
+      [t(isFp300() ? 'sum_blocks' : 'sum_size'), size],
+      [t('sum_distance'), m(info.from) + ' ' + t('to') + ' ' + m(info.to) + ' m'],
+      [t('sum_empty'), state.timeout + ' s'],
+    ];
+    $('summary').innerHTML = '';
+    rows.forEach(function (r) {
+      var dt = document.createElement('dt'); dt.textContent = r[0];
+      var dd = document.createElement('dd'); dd.textContent = r[1];
+      $('summary').appendChild(dt); $('summary').appendChild(dd);
+    });
+  }
+
+  /* ---------- navigation */
+  function canGoOn() {
+    if (state.step === 1) return !!state.sensor;
+    if (state.step === 2) return state.cells.length > 0;
+    if (state.step === 3) return state.name.trim().length > 0 && state.timeout !== null;
+    return true;
+  }
+  function update() {
+    document.querySelectorAll('section[data-step]').forEach(function (s) { s.hidden = Number(s.dataset.step) !== state.step; });
+    document.querySelectorAll('.fp-steps span').forEach(function (s, i) { s.classList.toggle('done', i < state.step); });
+    $('stepLabel').textContent = t('step', { n: state.step });
+    $('back').hidden = state.step === 1;
+    $('next').textContent = state.step === 4 ? t('add') : t('next');
+    $('next').disabled = !canGoOn();
+  }
+  function go(step) {
+    state.step = step;
+    if (step === 2) {
+      useEditor();
+      if (state.existingSlot === null) map.edit('new', state.cells);
+      renderExisting(); markExisting(); renderCellInfo(); startPolling();
+      setTimeout(function () { map.resize(); }, 0);
+    } else stopPolling();
+    if (step === 3) renderNaming();
+    if (step === 4) renderSummary();
+    update();
+    window.scrollTo(0, 0);
+  }
+
+  $('back').addEventListener('click', function () { go(state.step - 1); });
+  $('next').addEventListener('click', function () {
+    if (!canGoOn()) return;
+    if (state.step < 4) return go(state.step + 1);
+    create();
+  });
+
+  function create() {
+    Homey.showLoadingOverlay();
+    var zone = { name: state.name.trim(), cells: state.cells, absence_timeout: state.timeout };
+    Homey.emit('save_zone', { token: state.sensor.token, slot: state.existingSlot, zone: zone })
+      .then(function (device) { return Homey.createDevice(device); })
+      .then(function () { Homey.done(); })
+      .catch(function (err) {
+        Homey.hideLoadingOverlay();
+        Homey.alert(err && err.message ? err.message : String(err));
+      });
+  }
+
+  Homey.emit('list_sensors').then(function (list) {
+    state.sensors = list;
+    if (list.length === 1) state.sensor = list[0];
+    renderSensors(); update();
+  }).catch(function (err) { Homey.alert(err.message || String(err)); });
+
+  update();
+})();
+</script>

@@ -1,0 +1,9 @@
+{
+  "title": { "en": "Number of people changed", "nl": "Aantal personen is veranderd" },
+  "args": [
+    { "type": "device", "name": "device", "filter": "driver_id=fp400|fp400_zone" }
+  ],
+  "tokens": [
+    { "name": "people", "type": "number", "title": { "en": "people", "nl": "personen" }, "example": 1 }
+  ]
+}

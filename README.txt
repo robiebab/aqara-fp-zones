@@ -1,0 +1,1 @@
+Zigbee drivers for the Aqara FP300 and FP400. FP300: live target distance, distance range Flow cards and an adjustable detection range. FP400: draw up to 8 zones on a map and add each zone as its own device.

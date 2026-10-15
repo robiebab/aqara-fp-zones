@@ -1,0 +1,98 @@
+{
+  "name": {
+    "en": "Spatial sensor FP400",
+    "nl": "Ruimtesensor FP400"
+  },
+  "class": "sensor",
+  "capabilities": [
+    "alarm_motion",
+    "people_count",
+    "measure_luminance",
+    "button.identify",
+    "button.spatial_learning",
+    "button.reset_defaults"
+  ],
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "zigbee"
+  ],
+  "images": {
+    "small": "{{driverAssetsPath}}/images/small.png",
+    "large": "{{driverAssetsPath}}/images/large.png",
+    "xlarge": "{{driverAssetsPath}}/images/xlarge.png"
+  },
+  "zigbee": {
+    "manufacturerName": [
+      "Aqara",
+      "LUMI"
+    ],
+    "productId": [
+      "lumi.models.4447_8295"
+    ],
+    "endpoints": {
+      "1": {
+        "clusters": [
+          0,
+          3,
+          128,
+          1030,
+          64522,
+          64523,
+          64524
+        ],
+        "bindings": [
+          1030
+        ]
+      },
+      "2": {
+        "clusters": [
+          1024
+        ]
+      }
+    },
+    "learnmode": {
+      "image": "{{driverAssetsPath}}/icon.svg",
+      "instruction": {
+        "en": "Make sure the FP400 runs Zigbee firmware (switch it in the Aqara Home app), then put it in pairing mode as described in its manual.",
+        "nl": "Zorg dat de FP400 Zigbee firmware heeft (omzetten in de Aqara Home app) en zet hem daarna in koppelmodus zoals in de handleiding staat."
+      }
+    }
+  },
+  "capabilitiesOptions": {
+    "button.identify": {
+      "maintenanceAction": true,
+      "title": {
+        "en": "Identify",
+        "nl": "Identificeren"
+      },
+      "desc": {
+        "en": "Blinks the sensor light.",
+        "nl": "Laat het lampje van de sensor knipperen."
+      }
+    },
+    "button.spatial_learning": {
+      "maintenanceAction": true,
+      "title": {
+        "en": "AI spatial learning",
+        "nl": "AI ruimtelijk leren"
+      },
+      "desc": {
+        "en": "Lets the sensor learn the empty room. Make sure nobody is in the room. You get a notification when it is done.",
+        "nl": "Laat de sensor de lege ruimte leren. Zorg dat er niemand in de ruimte is. Je krijgt een melding als het klaar is."
+      }
+    },
+    "button.reset_defaults": {
+      "maintenanceAction": true,
+      "title": {
+        "en": "Restore default settings",
+        "nl": "Standaardinstellingen herstellen"
+      },
+      "desc": {
+        "en": "Restores this app's settings and lets the sensor restore its factory settings, without pairing again. Zones in this app are kept; ignore spots and outside room in the sensor may be cleared.",
+        "nl": "Zet de instellingen van deze app terug en laat de sensor zijn fabrieksinstellingen herstellen, zonder opnieuw te koppelen. Zones in deze app blijven bewaard; negeerplekken en buiten kamer in de sensor kunnen gewist worden."
+      }
+    }
+  }
+}
