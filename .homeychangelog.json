@@ -290,5 +290,9 @@
   "0.6.20": {
     "en": "FP300 zones no longer show a number of people (the FP300 sees at most one); removed from existing FP300 zones too. FP400 zones keep it.",
     "nl": "FP300 zones tonen geen aantal personen meer (de FP300 ziet hooguit één persoon); ook weggehaald bij bestaande FP300 zones. FP400 zones houden het."
+  },
+  "0.6.21": {
+    "en": "New icons for the FP300 (Zigbee) and the FP300 via Matter.",
+    "nl": "Nieuwe iconen voor de FP300 (Zigbee) en de FP300 via Matter."
   }
 }
