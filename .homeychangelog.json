@@ -350,5 +350,9 @@
   "0.7.0": {
     "en": "FP300 presence logic rebuilt on states instead of timers: only a change of mmWave or PIR counts, repeated reports are ignored, absence is checked with the sensor right away, the motion alarm name changes immediately, and the measurement only ends when mmWave and PIR are both off.",
     "nl": "FP300 aanwezigheidslogica opnieuw opgebouwd op statussen in plaats van timers: alleen een verandering van mmWave of PIR telt, herhaalde meldingen worden genegeerd, afwezigheid wordt direct bij de sensor gecontroleerd, de naam van het bewegingsalarm wisselt meteen, en de meting eindigt alleen als mmWave en PIR allebei uit zijn."
+  },
+  "0.7.1": {
+    "en": "FP300: temperature, humidity and light are only set (and logged) when the value changed; the same value again is ignored.",
+    "nl": "FP300: temperatuur, luchtvochtigheid en licht worden alleen bijgewerkt (en gelogd) als de waarde veranderd is; dezelfde waarde opnieuw wordt genegeerd."
   }
 }

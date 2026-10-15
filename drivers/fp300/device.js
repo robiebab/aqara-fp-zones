@@ -125,13 +125,14 @@ class FP300Device extends ZigBeeDevice {
     // settings, so no standard reporting is configured for them.
     // (Earlier versions did, which filled the sensor's report table: INSUFFICIENT_SPACE.)
     // Offsets and decimals (temperature_offset/_decimals, humidity_offset/_decimals)
-    this.registerCapability('measure_temperature', CLUSTER.TEMPERATURE_MEASUREMENT, {
-      reportParser: value => this._withOffset(value / 100, 'temperature', -65, 65),
-    });
-    this.registerCapability('measure_humidity', CLUSTER.RELATIVE_HUMIDITY_MEASUREMENT, {
-      reportParser: value => this._withOffset(value / 100, 'humidity', 0, 100),
-    });
-    this.registerCapability('measure_luminance', CLUSTER.ILLUMINANCE_MEASUREMENT);
+    // Like presence and PIR: only a CHANGED value is set (and logged); the same value again is ignored.
+    this._listenMeasurement('measure_temperature', CLUSTER.TEMPERATURE_MEASUREMENT.NAME,
+      raw => this._withOffset(raw / 100, 'temperature', -65, 65));
+    this._listenMeasurement('measure_humidity', CLUSTER.RELATIVE_HUMIDITY_MEASUREMENT.NAME,
+      raw => this._withOffset(raw / 100, 'humidity', 0, 100));
+    // ZCL: MeasuredValue = 10000 x log10(lux) + 1 (same conversion as homey-zigbeedriver)
+    this._listenMeasurement('measure_luminance', CLUSTER.ILLUMINANCE_MEASUREMENT.NAME,
+      raw => (typeof raw === 'number' ? Math.round(10 ** ((raw - 1) / 10000)) : null));
     // Refresh presence/PIR reporting (and remove the standard reports of old versions) at most once
     // a day, and always after the sensor rejoined the network (onEndDeviceAnnounce).
     this._pendingReportingRefresh = this._due('reportingRefreshedAt', REPORTING_REFRESH_EVERY_MS);
@@ -702,6 +703,22 @@ class FP300Device extends ZigBeeDevice {
     }
     this._pendingConfigRead = true; // read what the sensor uses now into the settings
     notify(this, viaZcl ? 'reset.done_sensor' : 'reset.done_fallback');
+  }
+
+  /**
+   * Temperature, humidity and light reports: set the capability only when the value changed.
+   * The FP300 sends the same value again and again (e.g. light 1 lux every two minutes at night);
+   * those reports change nothing, so they are not set and not logged.
+   */
+  _listenMeasurement(capability, clusterName, parse) {
+    const cluster = this.zclNode.endpoints[1].clusters[clusterName];
+    if (!cluster) return;
+    cluster.on('attr.measuredValue', raw => {
+      const value = parse(raw);
+      if (value === null || value === undefined || value === this.getCapabilityValue(capability)) return;
+      this.log(`${capability} ${value}`);
+      this.setCapabilityValue(capability, value).catch(this.error);
+    });
   }
 
   /** Round to the chosen decimals and add the user's offset; out-of-range values are ignored. */

@@ -134,6 +134,18 @@ async function test(name, fn) { await fn(); passed++; console.log(`ok   ${name}`
     assert.strictEqual(d.zoneStates()[1].occupied, false);
   });
 
+  await test('temperature, humidity and light: only a changed value is set and logged', async () => {
+    const d = device({}, () => ({}));
+    const clusters = { temperatureMeasurement: new EventEmitter(), relativeHumidity: new EventEmitter(), illuminanceMeasurement: new EventEmitter() };
+    d.zclNode = { endpoints: { 1: { clusters } } };
+    d._listenMeasurement('measure_luminance', 'illuminanceMeasurement', raw => Math.round(10 ** ((raw - 1) / 10000)));
+    d._listenMeasurement('measure_temperature', 'temperatureMeasurement', raw => d._withOffset(raw / 100, 'temperature', -65, 65));
+    for (const raw of [1, 1, 1]) clusters.illuminanceMeasurement.emit('attr.measuredValue', raw);   // 1 lux three times
+    clusters.illuminanceMeasurement.emit('attr.measuredValue', 20001);                              // 100 lux
+    for (const raw of [2150, 2150, 2160]) clusters.temperatureMeasurement.emit('attr.measuredValue', raw);
+    assert.deepStrictEqual(d.logs.filter(l => /^measure_/.test(l)), ['measure_luminance 1', 'measure_luminance 100', 'measure_temperature 21.5', 'measure_temperature 21.6']);
+  });
+
   Date.now = realNow;
   console.log(`\n${passed} state machine tests passed`);
 })().catch(err => { console.error(err); process.exit(1); });
