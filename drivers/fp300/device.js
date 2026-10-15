@@ -734,6 +734,9 @@ class FP300Device extends ZigBeeDevice {
    */
   _requestAbsenceCheck(reason) {
     if (this._absenceCheck) return;
+    // Nothing to confirm: the alarm is already off and no session runs (the sensor repeats its
+    // "off" state now and then, log of 15 October 13:37:43). No extra traffic to the sensor then.
+    if (this.getCapabilityValue('alarm_motion') !== true && !this._session) return;
     this._absenceCheck = (async () => {
       if (this.lumi) {
         try {
