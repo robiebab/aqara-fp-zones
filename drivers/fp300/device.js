@@ -176,6 +176,7 @@ class FP300Device extends ZigBeeDevice {
     }
     if (clusterId === AqaraLumiCluster.ID && !header.clusterSpecific && [0x01, 0x0a].includes(header.cmdId)) {
       const attrs = parseAttributeRecords(frame, header);
+      if (header.cmdId === 0x0a) this._reportsSinceStart = (this._reportsSinceStart || 0) + 1;
       await this._handleLumiAttributes(attrs);
       this._keepMeasurementRunning();
       this._scheduleFlush(true);
@@ -203,6 +204,7 @@ class FP300Device extends ZigBeeDevice {
     const changes = [];
     if (attrs[0x0142] !== undefined && (attrs[0x0142] === 1) !== this._mmwave) {
       this._mmwave = attrs[0x0142] === 1;
+      if (this._mmwave) this._reportsSinceStart = 0; // the radar only now has someone to measure
       changes.push('mmWave');
       this.log(`mmWave presence ${this._mmwave ? 'on' : 'off'}`);
     }
@@ -354,7 +356,19 @@ class FP300Device extends ZigBeeDevice {
     const wanted = this._session || this._distanceMode() === 'always';
     if (!wanted || !this._distanceWanted() || this._learningBusy()) return;
     if (this._distanceMode() === 'off' || this.getSetting('detection_mode') === '2') return;
-    if (Date.now() - this._lastTrackStart < TRACK_RESTART_MS || this._pending.has('trackDistance')) return;
+    if (this._pending.has('trackDistance')) return;
+    // Did the measurement really start? The distance is empty at the start of a session (it is cleared
+    // when nobody is there). Counted from the moment both are true (start written AND the radar sees
+    // someone): the first report may still be the confirmation of the start (0x0198); if a second
+    // report still brings no distance, the measurement did not start: start it again, right now.
+    // (In the logs the first distance comes within a second after "mmWave on".)
+    if (this._session && this._mmwave === true && this._lastTrackStart
+      && this.getCapabilityValue('target_distance') === null && (this._reportsSinceStart || 0) >= 2) {
+      this._pending.set('trackDistance', 1);
+      this.log('No distance after the start while the radar sees someone: starting the measurement again');
+      return;
+    }
+    if (Date.now() - this._lastTrackStart < TRACK_RESTART_MS) return;
     this._pending.set('trackDistance', 1);
     this.log('Measurement continued (still someone there)');
   }
@@ -571,7 +585,7 @@ class FP300Device extends ZigBeeDevice {
         await this.lumi.writeAttributes({ [name]: value });
         if (name !== 'trackDistance') wroteSetting = true;
         if (this._pending.get(name) === value) this._pending.delete(name);
-        if (name === 'trackDistance') this._lastTrackStart = Date.now();
+        if (name === 'trackDistance') { this._lastTrackStart = Date.now(); this._reportsSinceStart = 0; }
         this.log('Written', name, value);
         if (CONFIRM_ATTRIBUTES.includes(name)) await this._confirmWrite(name, value);
       }

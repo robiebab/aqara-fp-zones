@@ -181,6 +181,30 @@ async function test(name, fn) { await fn(); passed++; console.log(`ok   ${name}`
     assert.strictEqual(d.zoneStates()[1].occupied, true);
   });
 
+  await test('no distance after the start while the radar sees someone: started again at once, by messages, not by time', async () => {
+    const d = device({}, () => ({}));
+    await at(d, '15:00:00.000', MMW, 1);                       // session, start written
+    assert.strictEqual(d.writes.filter(w => w === 'trackDistance').length, 1);
+    await at(d, '15:00:00.300', 0x0198, 1);                    // the sensor confirms the start (report 1)
+    assert.strictEqual(d.writes.filter(w => w === 'trackDistance').length, 1, 'confirmation alone: wait');
+    await at(d, '15:00:20.000', PIR, 1);                       // a next report, still no distance
+    assert.strictEqual(d.writes.filter(w => w === 'trackDistance').length, 2, 'not started: started again');
+    assert.ok(d.logs.some(l => /starting the measurement again/.test(l)));
+    await at(d, '15:00:20.500', DIST, 140, 0x23);              // now it measures
+    await at(d, '15:00:40.000', PIR, 0);
+    await at(d, '15:00:41.000', PIR, 1);
+    assert.strictEqual(d.writes.filter(w => w === 'trackDistance').length, 2, 'measuring: no extra starts');
+  });
+
+  await test('only the PIR sees something: no restarts (the radar has nobody to measure)', async () => {
+    const d = device({}, () => ({}));
+    await at(d, '15:10:00.000', PIR, 1);
+    await at(d, '15:10:00.300', 0x0198, 1);
+    await at(d, '15:10:20.000', 0x0198, 1);
+    await at(d, '15:10:40.000', 0x0198, 1);
+    assert.strictEqual(d.writes.filter(w => w === 'trackDistance').length, 1);
+  });
+
   Date.now = realNow;
   console.log(`\n${passed} state machine tests passed`);
 })().catch(err => { console.error(err); process.exit(1); });

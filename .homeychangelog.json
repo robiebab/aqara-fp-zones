@@ -366,5 +366,9 @@
   "0.8.1": {
     "en": "FP300: the distance is cleared once the sensor confirmed nobody is there (and at app start), so a zone never uses the distance of last time; the first distance after entering is always a new measurement.",
     "nl": "FP300: de afstand wordt leeggemaakt zodra de sensor bevestigd heeft dat er niemand is (en bij het starten van de app), zodat een zone nooit de afstand van de vorige keer gebruikt; de eerste afstand na binnenkomst is altijd een nieuwe meting."
+  },
+  "0.8.2": {
+    "en": "FP300: if the measurement did not start (the radar sees someone, but a second report after the start still brings no distance), it is started again right away.",
+    "nl": "FP300: is de meting niet gestart (de radar ziet iemand, maar ook een tweede melding na de start brengt geen afstand), dan wordt hij direct opnieuw gestart."
   }
 }

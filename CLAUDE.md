@@ -2,7 +2,7 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.8.1**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.8.2**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
@@ -19,6 +19,7 @@ De presence logica van de FP300 is een toestandsmachine. **Voeg hier geen tijdsr
 - Naam van het alarm (`_motionTitleKey`, `_applyMotionTitle`): direct bij elke verandering, geen debounce.
 - PIR kaarten (`_pirCard`) en conditie (`pirActive()`): alleen op verandering van de PIR status.
 - Afstand hoort bij een sessie (0.8.1): bij `_endSession` (na de bevestigde afwezigheid) en bij het starten van de app wordt `target_distance` op null gezet (`_clearDistance`). Een zone kan daardoor nooit de afstand van de vorige keer gebruiken; de eerste afstand na binnenkomst is een nieuwe meting. De flowkaarten zijn null-veilig (`inRange` en de vergelijkingen eisen een getal).
+- Gestart of niet (0.8.2): `_reportsSinceStart` telt meldingen (cmd 0x0a) vanaf het moment dat de start geschreven is én de radar iemand ziet (reset bij het schrijven van de start en bij "mmWave aan"). Is de afstand nog leeg en brengt ook de tweede melding geen afstand, dan is de meting niet gestart en gaat de start direct opnieuw (`_keepMeasurementRunning`). Alleen met mmWave aan: met alleen de PIR heeft de radar niemand om te meten.
 - Afstandsmeting: start bij het begin van een sessie. De enige tijdsregel is `TRACK_RESTART_MS` (5 min): de FP300 stopt zijn meting zelf na 20 tot 30 minuten zonder dat te melden; daarom wordt hij bij een bericht van de sensor opnieuw gestart als de laatste start ouder is (`_keepMeasurementRunning`). Er wordt nooit iets gestopt op tijd en nooit iets buiten een wakker moment verstuurd. Geen afstand meer opvragen (gaf oude waarden).
 - Onderhoud (configuratie, firmware, batterij, rapportage) alleen als er geen sessie is (`_housekeepingAllowed`), zonder tijdsuitzondering.
 - Weggehaald in 0.7.0: minuuttimer, PIR hold (2 min), duplicaatvenster (2 s), debounce van de naam, "PIR zonder afstand na 10 s", "aanwezig zonder afstand 2 min", afstand opvragen, herhaald starten, polling, distance push job.
