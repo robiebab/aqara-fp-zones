@@ -18,6 +18,7 @@ const { buildTimeReadResponse } = require('../../lib/zigbeeTime');
 const newUid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const VIEWER_TRACK_EVERY_MS = 5 * 60 * 1000;
 const HOUSEKEEPING_MAX_DEFER_MS = 30 * 60 * 1000;
+const DUPLICATE_MS = 2000; // same presence/PIR value again within this time: the same report repeated
 const STALE_DISTANCE_MS = 2 * 60 * 1000; // present, but no distance this long: restart the measurement early
 // The FP300 ends a measurement by itself after a while; the app keeps it running according to the
 // chosen "Measure distance" mode by starting it again every 5 minutes. Not a setting: users cannot
@@ -192,7 +193,26 @@ class FP300Device extends ZigBeeDevice {
     return false;
   }
 
+  /**
+   * The FP300 sometimes sends the same presence or PIR report two or three times within a second
+   * (log of 15 October). A report with the same value as the previous one within DUPLICATE_MS is
+   * the same message again: it is dropped, so it is not logged or handled twice. (A "PIR on" much
+   * later while the PIR is still on is a real state repeat; that is handled further on.)
+   */
+  _dropDuplicates(attrs) {
+    const now = Date.now();
+    this._lastReport = this._lastReport || {};
+    for (const id of [0x0142, 0x014d]) {
+      if (attrs[id] === undefined) continue;
+      const last = this._lastReport[id];
+      if (last && last.value === attrs[id] && now - last.at < DUPLICATE_MS) delete attrs[id];
+      else this._lastReport[id] = { value: attrs[id], at: now };
+    }
+    return attrs;
+  }
+
   async _handleLumiAttributes(attrs) {
+    this._dropDuplicates(attrs);
     if (attrs[0x0142] !== undefined) {
       const present = attrs[0x0142] === 1;
       this.log(`mmWave presence ${present ? 'on' : 'off'}`);

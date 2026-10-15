@@ -326,5 +326,9 @@
   "0.6.29": {
     "en": "FP300: if the first status read shows someone is present, the other reads wait until nobody is present.",
     "nl": "FP300: blijkt uit de eerste statusuitlezing dat er iemand is, dan wachten de overige uitlezingen tot er niemand meer is."
+  },
+  "0.6.30": {
+    "en": "FP300: the same presence or PIR report sent two or three times within a second is handled and logged only once.",
+    "nl": "FP300: dezelfde aanwezigheids- of PIR melding die twee of drie keer binnen een seconde komt, wordt maar één keer verwerkt en gelogd."
   }
 }
