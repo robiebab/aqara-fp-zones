@@ -17,6 +17,7 @@ const { buildTimeReadResponse } = require('../../lib/zigbeeTime');
 
 const newUid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const VIEWER_TRACK_EVERY_MS = 5 * 60 * 1000;
+const HOUSEKEEPING_MAX_DEFER_MS = 30 * 60 * 1000;
 const STALE_DISTANCE_MS = 2 * 60 * 1000; // present, but no distance this long: restart the measurement early
 // The FP300 ends a measurement by itself after a while; the app keeps it running according to the
 // chosen "Measure distance" mode by starting it again every 5 minutes. Not a setting: users cannot
@@ -154,7 +155,6 @@ class FP300Device extends ZigBeeDevice {
   async _onFrame(clusterId, frame, header) {
     this._noteWake();
     if (!this._learningUntil) this._probeLearningLater();
-    this._askDistanceIfSilent();
     // The sensor asks Homey for the time about every 1.5 minutes; answer it like Zigbee2MQTT does.
     if (clusterId === 0x000a) {
       const response = buildTimeReadResponse(frame, header, this.homey.clock.getTimezone());
@@ -182,10 +182,12 @@ class FP300Device extends ZigBeeDevice {
       const attrs = parseAttributeRecords(frame, header);
       if (attrs[0x015f] !== undefined && header.cmdId === 0x0a) this._distancePushAt = Date.now(); // pushed, not asked
       await this._handleLumiAttributes(attrs);
+      this._askDistanceIfSilent(); // after handling: a "nobody present" frame has ended the session
       this._scheduleFlush(true);
       // Reports are consumed here, read responses go on so readAttributes() resolves.
       return header.cmdId === 0x0a;
     }
+    this._askDistanceIfSilent();
     this._scheduleFlush(true);
     return false;
   }
@@ -792,9 +794,29 @@ class FP300Device extends ZigBeeDevice {
     if (Date.now() - (this._lastStructAt || 0) > STRUCT_MAX_AGE_MS) this._pendingStructRead = true;
     if (this._session) this._maybeRestartTracking();
     const oneShots = awake && this._oneShots.size > 0;
-    const pushJob = awake && (Boolean(this._pushJob) || this._pendingReportingRefresh);
-    if (!this._pending.size && !this._pendingStructRead && !oneShots && !this._pendingConfigRead && !pushJob) return;
+    const hk = this._housekeepingAllowed();
+    const pushJob = awake && hk && (Boolean(this._pushJob) || this._pendingReportingRefresh);
+    const reads = hk && (this._pendingStructRead || this._pendingConfigRead);
+    if (!this._pending.size && !reads && !oneShots && !pushJob) return;
     this.homey.setTimeout(() => this._flush(awake).catch(this.error), 50);
+  }
+
+  /**
+   * Housekeeping (reading the configuration, firmware, battery status, refreshing the reporting) is
+   * not urgent. While someone is present the sensor is busy measuring and sending distances, so it
+   * waits until the sensor reports nobody (that message is itself a wake moment). If someone stays
+   * present for a very long time, it runs anyway after 30 minutes. Settings the user changed and
+   * maintenance actions are never held back.
+   */
+  _housekeepingAllowed() {
+    const due = this._pendingConfigRead || this._pendingStructRead || this._pendingReportingRefresh || this._pushJob;
+    if (!this._session) { this._housekeepingSince = null; return true; }
+    if (!due) return false;
+    if (!this._housekeepingSince) {
+      this._housekeepingSince = Date.now();
+      this.log('Status and configuration reads wait until nobody is present');
+    }
+    return Date.now() - this._housekeepingSince > HOUSEKEEPING_MAX_DEFER_MS;
   }
 
   /** Sends pending writes one at a time (advised for sleepy end devices). */
@@ -824,20 +846,21 @@ class FP300Device extends ZigBeeDevice {
         this._announceApplied = false;
         notify(this, 'fp300.applied', { time: this._time(Date.now()) });
       }
-      if (this._pendingConfigRead) {
+      const hk = this._housekeepingAllowed();
+      if (hk && this._pendingConfigRead) {
         await this.lumi.readAttributes(['presence', 'pirDetection']).catch(err => this.log('Reading presence failed', err.message));
         await this._readFirmware();
         await this._readConfiguration();
         this._pendingConfigRead = false;
         this.log('Configuration read from the sensor');
       }
-      if (this._pendingStructRead) {
+      if (hk && this._pendingStructRead) {
         await this.lumi.readAttributes(['lumiStruct']);
         this._pendingStructRead = false;
       }
       if (awake) await this._runOneShots();
-      if (awake) await this._refreshReporting();
-      if (awake) await this._runDistancePushJob();
+      if (awake && hk) await this._refreshReporting();
+      if (awake && hk) await this._runDistancePushJob();
       this._proactiveFailAt = 0;
       return true;
     } catch (err) {

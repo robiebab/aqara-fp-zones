@@ -2,7 +2,7 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.6.27**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.6.28**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
@@ -284,6 +284,10 @@ De FP300 meet alleen de dichtstbijzijnde persoon, dus een aantal kan alleen 0 of
 ## 8i. Iconen (0.6.21, 0.6.22)
 
 FP300 iconen (Zigbee en Matter) zijn aangeleverd door de gebruiker. De FP400 iconen worden gemaakt met `tools/fp400-icon.py` (shapely): net als bij het FP300 icoon een ronde basis (muurplaat) achter het apparaat, met de FP400 schijf eroverheen; het sensorvenster is, in de stijl van het FP300 icoon, een afgeronde 'tong' die aan de dikke buitenlijn hangt, met uitlopende bochten aan de bovenkant en lijndikte 26; de dunne randlijn van de voorkant stopt bij het venster. Een tweede sleuf op de zijkant (zoals bij de FP300) past niet: de schijf is te dun. De clip zit verborgen achter de schijf. 960 × 960, kleur #231f20, buitenlijnen 40, binnenlijnen 18, ronde uiteinden; verborgen lijnen worden geometrisch weggehaald (geen SVG masks). De Matter versie neemt het Matter logo uit het FP300 Matter icoon en houdt 50 px afstand.
+
+## 8j. Onderhoud pas als er niemand is (0.6.28)
+
+Op verzoek van de gebruiker (log 15 oktober): uitlezen van configuratie, firmware, batterijstatus (`0x00F7`) en het verversen van de rapportage (`_pendingConfigRead`, `_pendingStructRead`, `_pendingReportingRefresh`, push job) gebeurt niet meer tijdens een meetsessie, maar op het wakkere moment dat de sensor "niemand" meldt (`_housekeepingAllowed`). Blijft er langer dan 30 minuten iemand (`HOUSEKEEPING_MAX_DEFER_MS`), dan toch. Instellingen van de gebruiker, de afstandsstart en onderhoudsacties wachten nooit. `_askDistanceIfSilent` draait pas ná het verwerken van een bericht, zodat een "niemand" bericht eerst de sessie beëindigt en er daarna geen afstand meer wordt gevraagd. Een stopcommando voor de afstandsmeting bestaat niet; na "niemand" stuurt de sensor in de logs ook geen afstanden meer.
 
 ## 9. Open punten en onzekerheden
 

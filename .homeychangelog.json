@@ -318,5 +318,9 @@
   "0.6.27": {
     "en": "FP400 icons: the sensor window now hangs from the edge like the window on the FP300 icon.",
     "nl": "FP400 iconen: het sensorvenster hangt nu aan de rand, net als het venster op het FP300 icoon."
+  },
+  "0.6.28": {
+    "en": "FP300: status, battery and configuration reads wait until nobody is present, so the sensor can focus on measuring; no distance is asked any more after the sensor reported nobody.",
+    "nl": "FP300: status, batterij en configuratie worden pas uitgelezen als er niemand meer is, zodat de sensor zich op het meten kan richten; na 'niemand' wordt er geen afstand meer opgevraagd."
   }
 }
