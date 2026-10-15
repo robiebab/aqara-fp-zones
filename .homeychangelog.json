@@ -342,5 +342,9 @@
   "0.6.33": {
     "en": "FP300: no extra check when the sensor repeats its off state while everything is already off.",
     "nl": "FP300: geen extra controle als de sensor zijn uit status herhaalt terwijl alles al uit staat."
+  },
+  "0.6.34": {
+    "en": "FP300: configuration and reporting refresh at most once a day, firmware once a week, battery every 4 hours, also over app restarts; less traffic, longer battery life.",
+    "nl": "FP300: configuratie en rapportage verversen hooguit één keer per dag, firmware één keer per week, batterij elke 4 uur, ook over een herstart van de app heen; minder verkeer, langere batterijduur."
   }
 }

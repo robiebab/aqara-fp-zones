@@ -18,6 +18,9 @@ const { buildTimeReadResponse } = require('../../lib/zigbeeTime');
 const newUid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const VIEWER_TRACK_EVERY_MS = 5 * 60 * 1000;
 const HOUSEKEEPING_MAX_DEFER_MS = 30 * 60 * 1000;
+const CONFIG_READ_EVERY_MS = 24 * 60 * 60 * 1000;        // configuration read at most once a day
+const REPORTING_REFRESH_EVERY_MS = 24 * 60 * 60 * 1000;  // reporting refresh at most once a day
+const FIRMWARE_READ_EVERY_MS = 7 * 24 * 60 * 60 * 1000;  // firmware version at most once a week
 const ABSENCE_CHECK_TIMEOUT_MS = 4000; // reading back presence/PIR after an "off" report
 const DUPLICATE_MS = 2000; // same presence/PIR value again within this time: the same report repeated
 const STALE_DISTANCE_MS = 2 * 60 * 1000; // present, but no distance this long: restart the measurement early
@@ -75,7 +78,8 @@ class FP300Device extends ZigBeeDevice {
     this._flushing = false;
     this._rangePrefix = this.getStoreValue('rangePrefix') ?? 0x0300;
     this._lastTrackStart = 0;
-    this._lastStructAt = 0;
+    // remembered over app restarts, so a restart does not cause an extra battery read (0.6.34)
+    this._lastStructAt = this.getStoreValue('structAt') || 0;
 
     this.lumi = ensureCluster(zclNode.endpoints[1], AqaraLumiCluster);
     this.token = this.getData().token;
@@ -90,9 +94,9 @@ class FP300Device extends ZigBeeDevice {
     // Keep the distance measurement running while someone is present, without waiting for a
     // message from the sensor (the same way the settings page does it, which proved to work).
     this._trackTimer = this.homey.setInterval(() => this._keepTrackingAlive(), 60 * 1000);
-    // Read the real configuration once after start, the next time the sensor is reachable,
-    // so the settings show what the sensor really uses.
-    this._pendingConfigRead = true;
+    // Read the real configuration (and firmware) only when it was not done in the last 24 hours:
+    // the settings do not change by themselves, and every read costs the sensor battery.
+    this._pendingConfigRead = this._due('configReadAt', CONFIG_READ_EVERY_MS);
     // the yes/no setting "motion alarm also on PIR" became the choice motion_source
     if (this.getSetting('motion_includes_pir') === true && !this.getStoreValue('motionSourceMigrated')) {
       await this.setSettings({ motion_source: 'both' }).catch(this.error);
@@ -138,9 +142,9 @@ class FP300Device extends ZigBeeDevice {
       reportParser: value => this._withOffset(value / 100, 'humidity', 0, 100),
     });
     this.registerCapability('measure_luminance', CLUSTER.ILLUMINANCE_MEASUREMENT);
-    // Once after each start, on the first wake moment: refresh presence/PIR reporting
-    // and remove the standard reports earlier versions added.
-    this._pendingReportingRefresh = true;
+    // Refresh presence/PIR reporting (and remove the standard reports of old versions) at most once
+    // a day, and always after the sensor rejoined the network (onEndDeviceAnnounce).
+    this._pendingReportingRefresh = this._due('reportingRefreshedAt', REPORTING_REFRESH_EVERY_MS);
 
     if (this.isFirstInit()) {
       // Right after pairing the sensor is awake: configure and read the current configuration.
@@ -256,6 +260,7 @@ class FP300Device extends ZigBeeDevice {
     }
     if (Buffer.isBuffer(attrs[0x00f7])) {
       this._lastStructAt = Date.now();
+      this.setStoreValue('structAt', this._lastStructAt).catch(this.error);
       const struct = parseLumiStruct(attrs[0x00f7]);
       this._logStruct('0x00f7', struct);
       // Tag 0x18 = battery percentage, tag 0x17 = battery voltage (mV), see lumiBattery for PS-S04D in Z2M.
@@ -599,6 +604,7 @@ class FP300Device extends ZigBeeDevice {
       await this.setStoreValue('freedReporting', []);
     }
     this._pendingReportingRefresh = false;
+    this.setStoreValue('reportingRefreshedAt', Date.now()).catch(this.error);
   }
 
   /*
@@ -872,6 +878,11 @@ class FP300Device extends ZigBeeDevice {
     return Date.now() - this._housekeepingSince > HOUSEKEEPING_MAX_DEFER_MS;
   }
 
+  /** Is a periodic task due: never done, or longer ago than `every` (time kept in the device store)? */
+  _due(key, every) {
+    return Date.now() - (this.getStoreValue(key) || 0) > every;
+  }
+
   /** Sends pending writes one at a time (advised for sleepy end devices). */
   async _flush(awake = false) {
     if (!this.lumi) return true;
@@ -904,9 +915,13 @@ class FP300Device extends ZigBeeDevice {
       if (this._housekeepingAllowed() && this._pendingConfigRead) {
         await this.lumi.readAttributes(['presence', 'pirDetection']).catch(err => this.log('Reading presence failed', err.message));
         if (this._housekeepingAllowed()) {
-          await this._readFirmware();
+          if (this._due('firmwareReadAt', FIRMWARE_READ_EVERY_MS) || this.getSetting('firmware_info') === '-') {
+            await this._readFirmware();
+            this.setStoreValue('firmwareReadAt', Date.now()).catch(this.error);
+          }
           await this._readConfiguration();
           this._pendingConfigRead = false;
+          this.setStoreValue('configReadAt', Date.now()).catch(this.error);
           this.log('Configuration read from the sensor');
         }
       }
@@ -1045,6 +1060,7 @@ class FP300Device extends ZigBeeDevice {
     this.log('Sensor announced itself on the network: refreshing reporting and reading its state');
     this._pendingReportingRefresh = true;
     this._pendingConfigRead = true;
+    this.setStoreValue('firmwareReadAt', 0).catch(this.error); // a rejoin can follow a firmware update
     this._pendingStructRead = true;
     this._scheduleFlush(true);
   }

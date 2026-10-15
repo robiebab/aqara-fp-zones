@@ -2,7 +2,7 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.6.33**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.6.34**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
@@ -302,6 +302,10 @@ Log 15 oktober 13:21: na "niemand" zag alleen de PIR nog iets (de PIR kijkt verd
 Regel van de gebruiker: de PIR is de trigger, daarna tellen mmWave en PIR samen, en bij "uit" eerst de sensor uitlezen. `_requestAbsenceCheck(reason)`: na een "uit" melding (mmWave off, PIR off, of het bewegingsalarm dat uit zou gaan) leest de app `presence` en `pirDetection` terug (timeout 4 s, `ABSENCE_CHECK_TIMEOUT_MS`; het uit bericht is zelf een wakker moment). Pas daarna gaat het bewegingsalarm uit (`_updateMotionAlarm(source, true)`) en wordt `_checkSessionEnd` gedaan. Blijkt er toch iemand te zijn, dan wordt dat antwoord verwerkt als een melding en blijft alles aan. Geen antwoord: de meldingen worden vertrouwd. Let op: de controle mag nooit ge-await worden binnen `_handleLumiAttributes` (het antwoord loopt door dezelfde code; dat gaf een deadlock in de test). Een stopopdracht voor de afstandsmeting bestaat niet (zie 8j). Sinds 0.6.33 geen controle als het alarm al uit is en er geen sessie loopt (de sensor herhaalt "uit" soms 10 tot 15 s later).
 
 **Open vermoeden (log 15 oktober 13:21:21 en 13:37:44):** twee keer kwam er direct na uitlezingen door de app (firmware, controle) een "PIR on" zonder dat de radar iemand zag, en 20 s later "PIR off". Mogelijk is dat echte beweging (de PIR kijkt verder dan de radar), maar het kan ook zijn dat radioverkeer de PIR laat afgaan. Niet bevestigd; zie het antwoord aan de gebruiker.
+
+## 8n. Hoe vaak onderhoud (0.6.34)
+
+Tijden staan in de store, zodat een herstart van de app niets extra uitleest (`_due(key, every)`): configuratie `configReadAt` (24 uur), rapportage verversen `reportingRefreshedAt` (24 uur), firmware `firmwareReadAt` (7 dagen, of als het veld nog "-" is), batterijstatus `structAt` (4 uur, `STRUCT_MAX_AGE_MS`). Na opnieuw aanmelden op het netwerk (`onEndDeviceAnnounce`) gebeurt alles direct, firmware ook. Standaardinstellingen herstellen leest de configuratie ook direct.
 
 ## 9. Open punten en onzekerheden
 
