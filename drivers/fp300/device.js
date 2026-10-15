@@ -18,6 +18,7 @@ const { buildTimeReadResponse } = require('../../lib/zigbeeTime');
 const newUid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const VIEWER_TRACK_EVERY_MS = 5 * 60 * 1000;
 const HOUSEKEEPING_MAX_DEFER_MS = 30 * 60 * 1000;
+const ABSENCE_CHECK_TIMEOUT_MS = 4000; // reading back presence/PIR after an "off" report
 const DUPLICATE_MS = 2000; // same presence/PIR value again within this time: the same report repeated
 const STALE_DISTANCE_MS = 2 * 60 * 1000; // present, but no distance this long: restart the measurement early
 // The FP300 ends a measurement by itself after a while; the app keeps it running according to the
@@ -224,7 +225,7 @@ class FP300Device extends ZigBeeDevice {
       this._mmwave = present;
       await this._updateMotionAlarm('mmWave');
       if (present) this._onActivity('mmWave');
-      else this._checkSessionEnd('mmWave off');
+      else this._requestAbsenceCheck('mmWave off');
       this._updateZones();
     }
     // PIR movement (0x014D): the trigger of a tracking session (see _onActivity).
@@ -246,7 +247,7 @@ class FP300Device extends ZigBeeDevice {
         if (this._learningUntil) { this._learningEmptySince = null; this._learningMovementAt = Date.now(); }
         this._onActivity('PIR');
       } else {
-        this._checkSessionEnd('PIR off');
+        this._requestAbsenceCheck('PIR off');
       }
       this._updateZones();
     }
@@ -387,7 +388,7 @@ class FP300Device extends ZigBeeDevice {
     return ['mmwave', 'pir', 'both'].includes(v) ? v : 'mmwave';
   }
 
-  async _updateMotionAlarm(source) {
+  async _updateMotionAlarm(source, confirmed = false) {
     this._scheduleMotionTitle();
     const mode = this._motionSource();
     const mmwave = this._mmwavePresence();
@@ -397,6 +398,9 @@ class FP300Device extends ZigBeeDevice {
     else if (mode === 'both') value = mmwave === true || pir ? true : (mmwave === null ? null : false);
     else value = mmwave;
     if (value === null || value === undefined || value === this.getCapabilityValue('alarm_motion')) return;
+    // Going OFF is only done after the sensor confirmed it (see _requestAbsenceCheck)
+    // (never awaited here: the check's own read answer passes through this same code path)
+    if (value === false && !confirmed) { this._requestAbsenceCheck(source); return; }
     const why = mode === 'pir' ? 'PIR' : (value && mmwave !== true ? 'PIR' : source);
     this.log(`Motion alarm ${value ? 'on' : 'off'} (${why}, motion alarm on: ${mode})`);
     await this.setCapabilityValue('alarm_motion', value).catch(this.error);
@@ -719,6 +723,29 @@ class FP300Device extends ZigBeeDevice {
   /** For the condition card: does the PIR see movement right now (with the same 2 minute limit)? */
   pirActive() {
     return Boolean(this._pirActive && Date.now() - (this._pirAt || 0) <= PIR_HOLD_MS);
+  }
+
+  /**
+   * The user's rule: when the sensor reports "off", first read the sensor again to check that mmWave
+   * and PIR really are off; only then switch the motion alarm off and end the session. The off report
+   * itself is a wake moment, so the sensor answers right away. If someone turns out to be there after
+   * all, the answer is handled like a report and everything stays on. If the sensor does not answer,
+   * the reports it sent are trusted.
+   */
+  _requestAbsenceCheck(reason) {
+    if (this._absenceCheck) return;
+    this._absenceCheck = (async () => {
+      if (this.lumi) {
+        try {
+          await this.lumi.readAttributes(['presence', 'pirDetection'], { timeout: ABSENCE_CHECK_TIMEOUT_MS });
+          this.log(`Checked the sensor after "${reason}": mmWave ${this._mmwavePresence() ? 'on' : 'off'}, PIR ${this._pirActive ? 'on' : 'off'}`);
+        } catch (err) {
+          this.log(`Check after "${reason}" not answered, using the reports:`, err.message);
+        }
+      }
+      await this._updateMotionAlarm(reason, true);
+      this._checkSessionEnd(reason);
+    })().catch(this.error).finally(() => { this._absenceCheck = null; });
   }
 
   /** Both mmWave presence and PIR are off: the session ends. */

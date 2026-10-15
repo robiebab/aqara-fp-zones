@@ -334,5 +334,9 @@
   "0.6.31": {
     "en": "FP300: the distance is only asked from the sensor while the radar itself sees someone; with only the PIR on, the sensor answers an old value.",
     "nl": "FP300: de afstand wordt alleen opgevraagd als de radar zelf iemand ziet; met alleen de PIR aan geeft de sensor een oude waarde."
+  },
+  "0.6.32": {
+    "en": "FP300: when the sensor reports off, the app first reads mmWave and PIR back from the sensor; only when both are really off does the motion alarm go off and the session end.",
+    "nl": "FP300: meldt de sensor uit, dan leest de app eerst mmWave en PIR terug uit de sensor; pas als beide echt uit zijn, gaat het bewegingsalarm uit en eindigt de sessie."
   }
 }

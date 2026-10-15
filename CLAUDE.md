@@ -2,7 +2,7 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.6.31**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.6.32**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
@@ -296,6 +296,10 @@ De FP300 stuurt dezelfde aanwezigheids- of PIR melding soms 2 tot 3 keer binnen 
 ## 8l. Afstand opvragen alleen met radar (0.6.31)
 
 Log 15 oktober 13:21: na "niemand" zag alleen de PIR nog iets (de PIR kijkt verder dan de radar; de keuken zag op hetzelfde moment ook PIR). De app vroeg twee keer de afstand op en kreeg de oude 0,87 m, terwijl de radar niemand zag. `_askDistanceIfSilent` vraagt nu alleen op als `_mmwavePresence()` true is. Zelf gestuurde afstanden blijven altijd welkom.
+
+## 8m. Afwezigheid eerst controleren (0.6.32)
+
+Regel van de gebruiker: de PIR is de trigger, daarna tellen mmWave en PIR samen, en bij "uit" eerst de sensor uitlezen. `_requestAbsenceCheck(reason)`: na een "uit" melding (mmWave off, PIR off, of het bewegingsalarm dat uit zou gaan) leest de app `presence` en `pirDetection` terug (timeout 4 s, `ABSENCE_CHECK_TIMEOUT_MS`; het uit bericht is zelf een wakker moment). Pas daarna gaat het bewegingsalarm uit (`_updateMotionAlarm(source, true)`) en wordt `_checkSessionEnd` gedaan. Blijkt er toch iemand te zijn, dan wordt dat antwoord verwerkt als een melding en blijft alles aan. Geen antwoord: de meldingen worden vertrouwd. Let op: de controle mag nooit ge-await worden binnen `_handleLumiAttributes` (het antwoord loopt door dezelfde code; dat gaf een deadlock in de test). Een stopopdracht voor de afstandsmeting bestaat niet (zie 8j).
 
 ## 9. Open punten en onzekerheden
 
