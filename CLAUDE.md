@@ -2,7 +2,7 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.6.21**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.6.27**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
@@ -280,6 +280,10 @@ Label `learning_status` heet "Voortgang: AI Ruimtelijk inleren". Homey kan een i
 ## 8h. Geen aantal personen bij FP300 zones (0.6.20)
 
 De FP300 meet alleen de dichtstbijzijnde persoon, dus een aantal kan alleen 0 of 1 zijn. Nieuwe FP300 zone apparaten krijgen bij het koppelen alleen `alarm_motion` (`capabilities` in `save_zone`); bestaande verliezen `people_count` bij de start (`_fitCapabilities`). De kaart "Aantal personen is veranderd" gaat bij FP300 zones niet meer af. In de zonelijst van de app instellingen staat bij een FP300 alleen "Bezet". FP400 zones houden het aantal.
+
+## 8i. Iconen (0.6.21, 0.6.22)
+
+FP300 iconen (Zigbee en Matter) zijn aangeleverd door de gebruiker. De FP400 iconen worden gemaakt met `tools/fp400-icon.py` (shapely): net als bij het FP300 icoon een ronde basis (muurplaat) achter het apparaat, met de FP400 schijf eroverheen; het sensorvenster is, in de stijl van het FP300 icoon, een afgeronde 'tong' die aan de dikke buitenlijn hangt, met uitlopende bochten aan de bovenkant en lijndikte 26; de dunne randlijn van de voorkant stopt bij het venster. Een tweede sleuf op de zijkant (zoals bij de FP300) past niet: de schijf is te dun. De clip zit verborgen achter de schijf. 960 × 960, kleur #231f20, buitenlijnen 40, binnenlijnen 18, ronde uiteinden; verborgen lijnen worden geometrisch weggehaald (geen SVG masks). De Matter versie neemt het Matter logo uit het FP300 Matter icoon en houdt 50 px afstand.
 
 ## 9. Open punten en onzekerheden
 
