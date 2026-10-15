@@ -5,7 +5,6 @@
     "range_empty": "Choose at least one block for the detection range."
   },
   "settings": {
-    "applied_on_wake": "Saved. The FP300 is usually asleep: the setting is sent as soon as it wakes up (press its button briefly if needed).",
     "saved_eta": "Saved. __eta__"
   },
   "pair": {
@@ -151,13 +150,7 @@
     "sent": "__name__: __action__ was sent.",
     "not_applied": "__name__: the sensor did not take the setting __setting__. Try again and briefly press the sensor button.",
     "applied": "__name__: the new settings were applied to the sensor at __time__.",
-    "restart_done": "__name__: the sensor restarted and checked in again at __time__.",
-    "push_on": "__name__: the sensor now reports the distance by itself. Removed standard reports: __removed__.",
-    "push_off": "__name__: reporting the distance by itself is off, the standard reports are restored.",
-    "push_failed": "__name__: the sensor does not accept reporting the distance by itself (__reason__). Everything is restored.",
-    "report_illuminance": "light",
-    "report_humidity": "humidity",
-    "report_temperature": "temperature"
+    "restart_done": "__name__: the sensor restarted and checked in again at __time__."
   },
   "fp400": {
     "learning_started": "__name__: AI spatial learning started. Please stay out of the room.",
@@ -186,8 +179,6 @@
     "label_started_time": "__bar__  Started at __time__, done around __until__. Stay out of the room.",
     "label_done_time": "__bar__  Done at __time__ (after the 10 minutes Aqara advises). You can enter the room again.",
     "label_done_signal": "__bar__  Done at __time__, reported by the sensor. You can enter the room again.",
-    "state_busy": "learning",
-    "state_unknown": "state not read yet",
     "label_live": "__bar__  About __left__ min left. __details__",
     "live_confirmed": "Start confirmed by the sensor at __time__.",
     "live_unconfirmed": "Waiting for the sensor to confirm.",

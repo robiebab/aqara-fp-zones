@@ -47,12 +47,6 @@ module.exports = {
     return device.setArea(params.type, body && body.cells);
   },
 
-  /** Diagnostics: which look the settings page picked and why (visible with `homey app run`). */
-  async logTheme({ homey, body }) {
-    homey.app.log('Theme (settings page)', JSON.stringify(body));
-    return { ok: true };
-  },
-
   async forgetTarget({ homey, params }) {
     const device = requireSensor(homey, params.token);
     await device.forgetTarget(params.id);

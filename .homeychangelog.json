@@ -370,5 +370,9 @@
   "0.8.2": {
     "en": "FP300: if the measurement did not start (the radar sees someone, but a second report after the start still brings no distance), it is started again right away.",
     "nl": "FP300: is de meting niet gestart (de radar ziet iemand, maar ook een tweede melding na de start brengt geen afstand), dan wordt hij direct opnieuw gestart."
+  },
+  "0.8.3": {
+    "en": "Code cleaned up: old migrations, learning investigation leftovers and debug code removed. Fixed: the card 'Distance changed' now fires.",
+    "nl": "Code opgeschoond: oude migraties, resten van het leeronderzoek en debugcode weggehaald. Opgelost: de kaart 'Afstand is veranderd' gaat nu af."
   }
 }

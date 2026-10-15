@@ -43,7 +43,8 @@ function device(settings, answer = () => ({})) {
   d.homey = { __: k => k, manifest: { version: 'test' }, app: { bus: new EventEmitter() }, setTimeout: f => { setImmediate(f); return 1; }, clearTimeout() {},
     setInterval: () => 1, clearInterval() {}, notifications: { createNotification: async () => {} }, clock: { getTimezone: () => 'Europe/Amsterdam' } };
   d.driver = { pirOnTrigger: { trigger: async () => d.cards.push('PIR on') }, pirOffTrigger: { trigger: async () => d.cards.push('PIR off') },
-    triggers: Object.fromEntries(['distance_below', 'distance_above', 'entered_range', 'left_range'].map(k => [k, { trigger: async () => {} }])) };
+    triggers: Object.fromEntries(['target_distance_changed', 'distance_below', 'distance_above', 'entered_range', 'left_range']
+      .map(k => [k, { trigger: async (dev, tokens) => { if (k === 'target_distance_changed') d.cards.push(`distance ${tokens.target_distance}`); } }])) };
   Object.assign(d, { _pending: new Map(), _oneShots: new Map(), _flushing: false, token: 'S', _lastEmitted: '', _lastDistanceAt: 0, _lastTrackStart: 0,
     _viewerTrackAt: 0, _mmwave: null, _pir: null, _session: false, _wake: new WakePattern([]), _lastStructAt: clock, _pendingConfigRead: false, _pendingReportingRefresh: false });
   d.tracker = new BlockTracker(d.getZones());
@@ -93,7 +94,7 @@ async function test(name, fn) { await fn(); passed++; console.log(`ok   ${name}`
     assert.strictEqual(d.writes.filter(w => w === 'trackDistance').length, 1);
     assert.ok(d.logs.some(l => /Checked the sensor .*: mmWave off, PIR off/.test(l)));
     assert.strictEqual(d._caps.alarm_motion, false); assert.strictEqual(d._session, false);
-    assert.deepStrictEqual(d.cards, ['PIR on', 'PIR off']);
+    assert.deepStrictEqual(d.cards.filter(c => /^PIR/.test(c)), ['PIR on', 'PIR off']);
     assert.deepStrictEqual(d.titles, ['Motion: PIR', 'Motion: mmWave + PIR', 'Motion: PIR', 'Motion']);
     assert.strictEqual(d.reads.length, 1, 'one check, no distance asked');
   });
@@ -203,6 +204,15 @@ async function test(name, fn) { await fn(); passed++; console.log(`ok   ${name}`
     await at(d, '15:10:20.000', 0x0198, 1);
     await at(d, '15:10:40.000', 0x0198, 1);
     assert.strictEqual(d.writes.filter(w => w === 'trackDistance').length, 1);
+  });
+
+  await test('the card "Distance changed" fires on a changed distance only', async () => {
+    const d = device({}, () => ({}));
+    await at(d, '16:00:00.000', MMW, 1);
+    await at(d, '16:00:01.000', DIST, 150, 0x23);
+    await at(d, '16:00:02.000', DIST, 150, 0x23);                  // the same distance again
+    await at(d, '16:00:03.000', DIST, 175, 0x23);
+    assert.deepStrictEqual(d.cards.filter(c => /^distance/.test(c)), ['distance 1.5', 'distance 1.75']);
   });
 
   Date.now = realNow;

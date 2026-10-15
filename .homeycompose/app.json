@@ -1,6 +1,6 @@
 {
   "id": "nl.community.aqarafpzones",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "compatibility": ">=12.2.0",
   "sdk": 3,
   "platforms": [
@@ -57,10 +57,6 @@
     "forgetTarget": {
       "method": "POST",
       "path": "/fp400/:token/targets/:id/forget"
-    },
-    "logTheme": {
-      "method": "POST",
-      "path": "/debug/theme"
     },
     "putRange": {
       "method": "PUT",

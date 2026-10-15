@@ -15,6 +15,7 @@ class FP300Driver extends ZigBeeDriver {
     this.pirOffTrigger = this.homey.flow.getDeviceTriggerCard('fp300_pir_off');
     this.homey.flow.getConditionCard('fp300_pir_active').registerRunListener(async args => args.device.pirActive());
     this.triggers = {
+      target_distance_changed: this.homey.flow.getDeviceTriggerCard('target_distance_changed'),
       distance_below: this.homey.flow.getDeviceTriggerCard('distance_below'),
       distance_above: this.homey.flow.getDeviceTriggerCard('distance_above'),
       entered_range: this.homey.flow.getDeviceTriggerCard('entered_range'),

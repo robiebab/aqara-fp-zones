@@ -34,7 +34,6 @@ const MOTION_TITLES = {
  * also during learning. So there is no message stream to count. Progress is therefore based on
  * the ~10 minutes Aqara advises, and learning ends early if the sensor ever reports 0x0157 = 0.
  */
-const LEARN_EXPECTED_REQUESTS = 6; // kept for the time requests counter in the log only
 const FP300_LEARNING_MS = 10 * 60 * 1000;
 const LEARNING_RESULT_MS = 10 * 60 * 1000; // how long the result of a learning run stays in the settings
 // settings the app reads back after writing, to be sure the sensor uses them
@@ -72,7 +71,6 @@ class FP300Device extends ZigBeeDevice {
     this._lastEmitted = '';
     this._lastDistanceAt = 0;
     this._viewerTrackAt = 0;
-    await this._migrateZoneIds().catch(err => this.error('Zone id migration failed', err.message));
     this.tracker = new BlockTracker(this.getZones());
     // a distance from before this start belongs to an earlier session: not used
     if (this.getCapabilityValue('target_distance') !== null) {
@@ -89,21 +87,6 @@ class FP300Device extends ZigBeeDevice {
     // version. The settings in the sensor do not change by themselves. A rejoin or "restore defaults"
     // asks for it too (onEndDeviceAnnounce, _resetDefaults).
     this._pendingConfigRead = this._newSinceLast('configReadVersion');
-    // the yes/no setting "motion alarm also on PIR" became the choice motion_source
-    if (this.getSetting('motion_includes_pir') === true && !this.getStoreValue('motionSourceMigrated')) {
-      await this.setSettings({ motion_source: 'both' }).catch(this.error);
-    }
-    if (!this.getStoreValue('motionSourceMigrated')) await this.setStoreValue('motionSourceMigrated', true).catch(this.error);
-    // 0.6.12: the separate distance switches became one choice (distance_mode)
-    if (!this.getStoreValue('distanceModeMigrated')) {
-      let mode = 'auto';
-      if (this.getSetting('track_on_presence') === false) mode = 'off';
-      else if (this.getSetting('track_always') === true) mode = 'always';
-      else if (this.getSetting('track_without_zones') === true) mode = 'present';
-      await this.setSettings({ distance_mode: mode }).catch(this.error);
-      await this.setStoreValue('distanceModeMigrated', true).catch(this.error);
-    }
-    // (since 0.6.12 repeated start is no longer a setting at all, so nothing to switch off)
     // learn when this sensor tends to wake up, to tell the user when a change will arrive
     this._wake = new WakePattern(this.getStoreValue('wakes'));
     this._resumeLearningWindow();
@@ -158,31 +141,24 @@ class FP300Device extends ZigBeeDevice {
       const response = buildTimeReadResponse(frame, header, this.homey.clock.getTimezone());
       if (response) {
         this.zclNode.endpoints[1].sendFrame(0x000a, response)
-          .then(() => this.log('Time requested by the sensor, answered'))
-          .catch(err => this.log('Answering time request failed', err.message));
-        if (this._learningUntil) {
-          this.log('Learning trace', `cluster 0x${clusterId.toString(16)}`, `cmd 0x${header.cmdId.toString(16)}`, frame.toString('hex'));
-          this._onLearningMessage();
-          this._learningNoteMessage('time');
-        }
+          .catch(err => this.log('Answering the time request failed', err.message));
+        if (this._learningUntil) this._learningNoteMessage('time');
         return true;
       }
     }
-    // Diagnostics: while learning, log every message, to find out whether the FP300 reports
-    // "learning done" in a way that is not documented yet (the Aqara hub seems to know quickly).
-    if (this._learningUntil) {
-      this.log('Learning trace', `cluster 0x${clusterId.toString(16)}`, `cmd 0x${header.cmdId.toString(16)}`, frame.toString('hex'));
-      this._learningNoteMessage(this._messageKind(clusterId, frame, header));
-    }
+    const kind = this._learningUntil ? this._messageKind(clusterId, frame, header) : null;
     if (clusterId === AqaraLumiCluster.ID && !header.clusterSpecific && [0x01, 0x0a].includes(header.cmdId)) {
       const attrs = parseAttributeRecords(frame, header);
       if (header.cmdId === 0x0a) this._reportsSinceStart = (this._reportsSinceStart || 0) + 1;
       await this._handleLumiAttributes(attrs);
+      // while learning: after handling (so presence from this message counts), show what came last
+      if (kind) this._learningNoteMessage(kind);
       this._keepMeasurementRunning();
       this._scheduleFlush(true);
       // Reports are consumed here, read responses go on so readAttributes() resolves.
       return header.cmdId === 0x0a;
     }
+    if (kind) this._learningNoteMessage(kind);
     this._keepMeasurementRunning();
     this._scheduleFlush(true);
     return false;
@@ -259,21 +235,24 @@ class FP300Device extends ZigBeeDevice {
 
   async _setDistance(current) {
     const previous = this.getCapabilityValue('target_distance');
-    // Homey runs the "target_distance_changed" trigger itself for this custom capability.
     await this.setCapabilityValue('target_distance', current).catch(this.error);
     // diagnostics: how often distances come in (seconds since the previous one)
     const gap = this._lastDistanceAt ? ((Date.now() - this._lastDistanceAt) / 1000).toFixed(1) : '-';
     this.log(`Distance ${current} m (previous ${gap} s ago)`);
     this._lastDistanceAt = Date.now();
     this._publishZones(this.tracker.update(this._zonePresence(), current, Date.now()));
-    if (previous === current) return;
+    if (previous === current) return; // the same distance again: nothing changed, no cards
+    // These cards are defined by this app, so the app runs them (Homey only runs the cards of its own
+    // system capabilities by itself).
+    const { triggers } = this.driver;
+    triggers.target_distance_changed.trigger(this, { target_distance: current }).catch(this.error);
     const tokens = { distance: current };
     const state = { previous, current };
-    const { driver } = this;
     for (const card of ['distance_below', 'distance_above', 'entered_range', 'left_range']) {
-      driver.triggers[card].trigger(this, tokens, state).catch(this.error);
+      triggers[card].trigger(this, tokens, state).catch(this.error);
     }
   }
+
 
 
 
@@ -469,23 +448,7 @@ class FP300Device extends ZigBeeDevice {
       presence: { minInterval: 0, maxInterval: 3600, minChange: 1 },
       pirDetection: { minInterval: 0, maxInterval: 3600, minChange: 1 },
     });
-    this.log('Presence and PIR reporting refreshed in the sensor');
-    if (!this.getStoreValue('stdReportsRemovedV1')) {
-      const ep = this.zclNode.endpoints[1];
-      for (const name of [CLUSTER.TEMPERATURE_MEASUREMENT.NAME, CLUSTER.RELATIVE_HUMIDITY_MEASUREMENT.NAME, CLUSTER.ILLUMINANCE_MEASUREMENT.NAME]) {
-        const cluster = ep.clusters[name];
-        if (!cluster) continue;
-        try {
-          await cluster.configureReporting({ measuredValue: { minInterval: 0, maxInterval: 0xffff, minChange: 0 } });
-          this.log(`Standard ${name} report removed (the sensor reports it by itself)`);
-        } catch (err) {
-          if (!/^[A-Z_]+$/.test(String(err && err.message))) throw err; // asleep: try again next wake
-          this.log(`Removing the standard ${name} report gave`, err.message);
-        }
-      }
-      await this.setStoreValue('stdReportsRemovedV1', true);
-      await this.setStoreValue('freedReporting', []);
-    }
+    this.log('Presence and PIR reporting set up in the sensor');
     this._pendingReportingRefresh = false;
     this.setStoreValue('reportingVersion', this.homey.manifest.version).catch(this.error);
   }
@@ -995,18 +958,12 @@ class FP300Device extends ZigBeeDevice {
 
   _learningNoteMessage(kind) {
     this._learningLast = { at: Date.now(), kind };
-    this._learningMsgCount = (this._learningMsgCount || 0) + 1;
-    // shortly after, so presence and state from this same message are taken into account
-    if (!this._learningLivePending) {
-      this._learningLivePending = true;
-      this.homey.setTimeout(() => { this._learningLivePending = false; this._showLearningLive(); }, 300);
-    }
+    this._showLearningLive();
   }
 
   /** The settings label while learning: time, start confirmation, empty room, last sign of life. */
   _showLearningLive() {
     if (!this._learningUntil) return;
-    this._learningLiveAt = Date.now();
     const pct = this.learningPercent();
     const left = Math.max(1, Math.ceil((this._learningUntil - Date.now()) / 60000));
     const t = (k, tok) => this.homey.__(`learning.${k}`, tok);
@@ -1034,11 +991,8 @@ class FP300Device extends ZigBeeDevice {
     this._learningEmptySince = null;
     this._learningMovementAt = null;
     this._learningLast = null;
-    this._learningCount = 0;
     this._learningMinutesShown = 0;
-    this._learningLastAt = start;
     this.setStoreValue('learningStart', start).catch(this.error);
-    this.setStoreValue('learningCount', 0).catch(this.error);
     this._startProgress();
     this._learningMovement = false;
     this.setStoreValue('learningUntil', until).catch(this.error);
@@ -1080,8 +1034,6 @@ class FP300Device extends ZigBeeDevice {
     if (until > Date.now()) {
       this._learningUntil = until;
       this._learningStart = this.getStoreValue('learningStart') || (until - FP300_LEARNING_MS);
-      this._learningCount = this.getStoreValue('learningCount') || 0;
-      this._learningLastAt = Date.now();
       this._startProgress();
       this._learningTimer = this.homey.setTimeout(() => this._finishLearningWindow(), until - Date.now());
       this._updateWaitingWarning();
@@ -1126,16 +1078,6 @@ class FP300Device extends ZigBeeDevice {
     return Math.max(0, Math.min(99, Math.floor(((Date.now() - this._learningStart) / span) * 100)));
   }
 
-  learningStatus() {
-    if (!this._learningUntil) return null;
-    return {
-      percent: this.learningPercent(),
-      count: this._learningCount || 0,
-      expected: LEARN_EXPECTED_REQUESTS,
-      since: this._learningStart,
-      last: this._learningLastAt,
-    };
-  }
 
   /** Text progress bar for the device settings, e.g. "██████░░░░░░  50 %  (3 of 6)". */
   _learningBar(percent) {
@@ -1157,16 +1099,6 @@ class FP300Device extends ZigBeeDevice {
     this.setSettings({ learning_status: text }).catch(err => this.log('Learning status not shown', err.message));
   }
 
-  /** A learning message (time request) arrived: one step further; after the 6th, done. */
-  _onLearningMessage() {
-    this._learningMinutesShown = 0;
-    this._learningCount = (this._learningCount || 0) + 1;
-    this._learningLastAt = Date.now();
-    this.setStoreValue('learningCount', this._learningCount).catch(this.error);
-    this.log(`Learning progress: message ${this._learningCount} of ${LEARN_EXPECTED_REQUESTS}`);
-
-
-  }
 
   _stopProgress() {
     if (this._progressTimer) this.homey.clearInterval(this._progressTimer);
@@ -1203,14 +1135,6 @@ class FP300Device extends ZigBeeDevice {
     return this.getStoreValue('zones') || {};
   }
 
-  async _migrateZoneIds() {
-    const zones = { ...this.getZones() };
-    let changed = false;
-    for (const zone of Object.values(zones)) {
-      if (!zone.uid) { zone.uid = newUid(); changed = true; }
-    }
-    if (changed) await this.setStoreValue('zones', zones);
-  }
 
   slotOfZone(uid) {
     const entry = Object.entries(this.getZones()).find(([, zone]) => zone.uid === uid);
@@ -1295,7 +1219,6 @@ class FP300Device extends ZigBeeDevice {
       zones: this.getZones(),
       zoneStates: this.zoneStates(),
       linked: this._linkedZoneDevices(),
-      learning: this.learningStatus(),
       rangeBlocks: this.getRangeBlocks(),
     };
   }

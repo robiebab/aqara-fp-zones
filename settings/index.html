@@ -875,13 +875,9 @@ function onHomeyReady(Homey) {
 
   // iOS only shows :active styles when the page listens to touches
   document.addEventListener('touchstart', function () {}, { passive: true });
-  var themePref = 'auto', themeLogged = false;
+  var themePref = 'auto';
   var rerunTheme = fpWatchTheme(function () { return themePref; }, function (info) {
     if (typeof map !== 'undefined' && map) map.render();
-    if (!themeLogged) {
-      themeLogged = true;
-      setTimeout(function () { Homey.api('POST', '/debug/theme', fpTheme(themePref), function () {}); }, 1200);
-    }
   });
   function renderThemeChoice() {
     document.querySelectorAll('#themeChoice button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.theme === themePref)); });

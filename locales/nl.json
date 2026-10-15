@@ -5,7 +5,6 @@
     "range_empty": "Kies minstens één blok voor het detectiebereik."
   },
   "settings": {
-    "applied_on_wake": "Opgeslagen. De FP300 slaapt meestal: de instelling wordt verstuurd zodra hij wakker wordt (druk eventueel kort op de knop).",
     "saved_eta": "Opgeslagen. __eta__"
   },
   "pair": {
@@ -151,13 +150,7 @@
     "sent": "__name__: __action__ is verstuurd.",
     "not_applied": "__name__: de sensor heeft de instelling __setting__ niet overgenomen. Probeer het opnieuw en druk daarbij kort op de knop van de sensor.",
     "applied": "__name__: de nieuwe instellingen zijn om __time__ op de sensor gezet.",
-    "restart_done": "__name__: de sensor is herstart en meldde zich om __time__ weer.",
-    "push_on": "__name__: de sensor meldt de afstand nu zelf. Weggehaalde standaardmeldingen: __removed__.",
-    "push_off": "__name__: automatisch melden van de afstand staat uit, de standaardmeldingen zijn teruggezet.",
-    "push_failed": "__name__: de sensor accepteert het zelf melden van de afstand niet (__reason__). Alles is teruggezet.",
-    "report_illuminance": "helderheid",
-    "report_humidity": "luchtvochtigheid",
-    "report_temperature": "temperatuur"
+    "restart_done": "__name__: de sensor is herstart en meldde zich om __time__ weer."
   },
   "fp400": {
     "learning_started": "__name__: AI ruimtelijk leren is gestart. Blijf even uit de ruimte.",
@@ -186,8 +179,6 @@
     "label_started_time": "__bar__  Gestart om __time__, klaar rond __until__. Blijf uit de ruimte.",
     "label_done_time": "__bar__  Klaar om __time__ (na de 10 minuten die Aqara aanraadt). Je kunt de ruimte weer in.",
     "label_done_signal": "__bar__  Klaar om __time__, gemeld door de sensor. Je kunt de ruimte weer in.",
-    "state_busy": "bezig met leren",
-    "state_unknown": "status nog niet uitgelezen",
     "label_live": "__bar__  Nog ongeveer __left__ min. __details__",
     "live_confirmed": "Start bevestigd door de sensor om __time__.",
     "live_unconfirmed": "Wacht op bevestiging van de sensor.",

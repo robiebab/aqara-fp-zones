@@ -15,11 +15,6 @@ class AqaraFpZonesApp extends Homey.App {
     this.log('Aqara FP Zones started');
   }
 
-  /** Find an FP400 device by its Zigbee token. */
-  getFp400(token) {
-    return this._find('fp400', token);
-  }
-
   /** Find a sensor that can have zones (FP300 or FP400) by its Zigbee token. */
   getSensor(token) {
     return this._find('fp400', token) || this._find('fp300', token);

@@ -2,7 +2,7 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.8.2**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.8.3**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
@@ -38,6 +38,16 @@ De presence logica van de FP300 is een toestandsmachine. **Voeg hier geen tijdsr
 - FP400 lichtinstellingen 0,5 s na opslaan -> direct met de nieuwe waarden; reset: geen 3 s wachten, maar nu lezen en nog eens bij het volgende bericht.
 
 Bewust tijd (geen status beschikbaar of het IS een tijd): `TRACK_RESTART_MS` (FP300 stopt zijn meting zelf), batterij elke 4 uur (firmware 6542 stuurt hem niet zelf), de "leeg na" tijd per zone en de afwezigheidsvertraging (instellingen van de gebruiker), FP300 leervenster 10 min (advies Aqara, geen "klaar" signaal), FP400 leer-timeout 15 min (vangnet als er geen resultaat komt), FP400 abonnement op posities elke 10 s (protocol), FP400 licht opvragen (de FP400 meldt licht niet zelf; interval is een instelling), `FRESH_MS` (posities ouder dan 30 s tellen niet), "Eigen instelling" zetten 1 s na `onSettings` (Homey overschrijft instellingen die tijdens onSettings gezet worden), de live pagina's (1 s verversen) en UI animaties. Kandidaten die eerst een test met de sensor nodig hebben: FP400 personenaantal via rapportage in plaats van elke 30 s vragen; live pagina's via Homey realtime events in plaats van elke seconde vragen.
+
+## 000. Opgeschoond in 0.8.3
+
+Volledige doorloop van de code; weggehaald omdat het niet (meer) gebruikt werd of nergens bij aansloot:
+- eenmalige migraties die op alle apparaten al gedraaid hadden: `motion_includes_pir` -> `motion_source`, losse afstandsschakelaars -> `distance_mode`, zone ids (`_migrateZoneIds` FP300 en FP400), zone uid (`_migrateUid`), en het verwijderen van oude standaardmeldingen (`stdReportsRemovedV1`, `freedReporting`);
+- onderzoeksresten van AI leren: berichtenteller (`LEARN_EXPECTED_REQUESTS`, `learningCount`, `_onLearningMessage`), `learningStatus()` (werd door geen pagina gebruikt), hex dumps "Learning trace", de 300 ms timer van het live label (nu direct na het verwerken van een bericht);
+- de debug route `POST /debug/theme` met handler en aanroep op de instellingenpagina;
+- `app.getFp400()` (ongebruikt), de log "Time requested by the sensor, answered" bij elke tijdvraag (alleen fouten worden nog gelogd);
+- vertalingen zonder gebruik (`fp300.push_*`, `fp300.report_*`, `learning.state_*`, `settings.applied_on_wake`).
+Gerepareerd: de kaart "Afstand is veranderd" (`target_distance_changed`) werd nooit uitgevoerd; Homey voert alleen de kaarten van zijn eigen systeemcapabilities zelf uit. De app voert hem nu uit in `_setDistance`, alleen bij een veranderde afstand.
 
 ## 0. Belangrijk: versies 0.6.4 tot en met 0.6.6 zijn teruggedraaid
 
@@ -106,7 +116,7 @@ homey app validate --level publish
 .homeycompose/app.json            id, versie, rechten (homey:wireless:zigbee), Web API routes
 .homeycompose/capabilities/       target_distance, people_count, learning_progress
 .homeycompose/flow/triggers/      people_changed (app niveau, voor FP400 en zones)
-app.js                            event bus, getSensor(), getSensors(), getFp400()
+app.js                            event bus, getSensor(), getSensors()
 api.js                            Web API voor de app instellingen pagina
 lib/zclRaw.js                     ruwe ZCL frames: header, waarden, Lumi TLV structs, endpoint hook, default response
 lib/AqaraClusters.js              eigen clusters (0xFCC0, 0xFC0A/B/C, 0x0080, occupancy uitbreiding)
@@ -117,7 +127,11 @@ lib/fp400Tracking.js              positieframes ontleden, raster 16 × 20, ZoneT
 lib/fp400Areas.js                 negeerplekken en buiten kamer masks (40 bytes)
 lib/wakePattern.js                leert wanneer een slapende sensor wakker wordt
 lib/zigbeeTime.js                 antwoord op tijdvragen (Time cluster 0x000A)
-lib/deviceUtil.js                 ensureCapabilities(), notify()
+lib/deviceUtil.js                 ensureCapabilities(), notify(), scheduleZoneDeadline()
+lib/resetDefaults.js              standaardinstellingen herstellen (app instellingen + ZCL reset)
+tools/fp400-icon.py               tekent de FP400 iconen
+test/fp300-state.js               toestandsmachine FP300, nagespeeld met echte logs
+test/zone-devices.js              zone apparaten: koppeling via uid, verwijderen, hergebruikte plek
 drivers/fp300/                    FP300 driver, device, instellingen, flowkaarten
 drivers/fp400/                    FP400 driver, device, instellingen, flowkaarten
 drivers/fp400_zone/               zone apparaat (FP300 én FP400), wizard in pair/wizard.html
@@ -279,8 +293,8 @@ Standaard clusters: temperatuur `0x0402`, vocht `0x0405`, licht `0x0400`, identi
 
 ## 8c. Rapportage en netwerk (0.5.27)
 
-- **Geen standaardrapportage voor temperatuur, vocht en licht.** De FP300 stuurt die waarden via zijn eigen Aqara meetinstellingen; de app luistert alleen (`attr.measuredValue`). Vroegere versies configureerden ze wel (via `registerCapability` met `reportOpts`), wat de rapportagetabel van de sensor vulde (`INSUFFICIENT_SPACE`). Bij bestaande sensoren worden die drie meldingen eenmalig verwijderd (`_refreshReporting`, store `stdReportsRemovedV1`).
-- **Rapportage voor `0x0142` en `0x014D` na elke start opnieuw ingesteld**, op het eerste wakkere moment, en na opnieuw aanmelden op het netwerk.
+- **Geen standaardrapportage voor temperatuur, vocht en licht.** De FP300 stuurt die waarden via zijn eigen Aqara meetinstellingen; de app luistert alleen (`attr.measuredValue`). Vroegere versies configureerden ze wel (via `registerCapability` met `reportOpts`), wat de rapportagetabel van de sensor vulde (`INSUFFICIENT_SPACE`). Het eenmalig verwijderen van die meldingen bij oude koppelingen is in 0.8.3 weggehaald (was op alle apparaten al uitgevoerd).
+- **Rapportage voor `0x0142` en `0x014D`** wordt ingesteld als het nog nooit gedaan is, bij een nieuwe appversie en na opnieuw aanmelden op het netwerk (sinds 0.8.0 niet meer bij elke start).
 - **Prevent leave (`0x00FC`)**: meldt de sensor false, dan zet de app hem terug op true, zodat de sensor niet van het netwerk valt.
 
 ## 8e. Standaardinstellingen herstellen (0.6.1)

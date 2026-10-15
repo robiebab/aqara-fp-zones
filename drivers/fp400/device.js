@@ -38,7 +38,6 @@ class FP400Device extends ZigBeeDevice {
     this.token = this.getData().token;
     this._viewerUntil = 0;
     this._lastEmitted = '';
-    await this._migrateZoneIds().catch(err => this.error('Zone id migration failed', err.message));
     this.tracker = new ZoneTracker(this.getZones());
 
     const ep1 = zclNode.endpoints[1];
@@ -380,24 +379,6 @@ class FP400Device extends ZigBeeDevice {
     return this.getStoreValue('zones') || {};
   }
 
-  /** Older versions stored rectangles without a unique id: convert to painted cells and add an id. */
-  async _migrateZoneIds() {
-    const zones = { ...this.getZones() };
-    let changed = false;
-    for (const [slot, zone] of Object.entries(zones)) {
-      let next = zone;
-      if (!Array.isArray(zone.cells)) {
-        next = { ...parseZone(zone), uid: zone.uid };
-        changed = true;
-      }
-      if (!next.uid) {
-        next = { ...next, uid: newUid() };
-        changed = true;
-      }
-      zones[slot] = next;
-    }
-    if (changed) await this.setStoreValue('zones', zones);
-  }
 
   /** Slot (1 to 8) of the zone with this unique id, or null. */
   slotOfZone(uid) {

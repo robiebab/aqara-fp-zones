@@ -17,7 +17,6 @@ class FP400ZoneDevice extends Homey.Device {
     this.homey.app.bus.on(`zones:${this.parentToken}`, this._onZones);
 
     const parent = this._parent();
-    await this._migrateUid(parent);
     await this._fitCapabilities(parent);
 
     if (parent && parent.tracker) await this._apply({ states: parent.zoneStates(), events: [] });
@@ -39,18 +38,10 @@ class FP400ZoneDevice extends Homey.Device {
     return this.homey.app.getSensor(this.parentToken);
   }
 
-  /** Devices made by version 0.1.0 only knew their slot: adopt the id of the zone in that slot once. */
-  async _migrateUid(parent) {
-    if (this.getStoreValue('uid')) return;
-    const slot = this.getStoreValue('slot');
-    const zone = parent && parent.getZones()[slot];
-    if (zone && zone.uid) await this.setStoreValue('uid', zone.uid);
-  }
 
   async _apply({ states, events }) {
     const parent = this._parent();
     if (!parent) return;
-    if (!this.getStoreValue('uid')) await this._migrateUid(parent);
     if (parent.kind === 'fp300' && this.hasCapability('people_count')) await this._fitCapabilities(parent);
 
     const slot = parent.slotOfZone(this.getStoreValue('uid'));

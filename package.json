@@ -1,6 +1,6 @@
 {
   "name": "nl.community.aqarafpzones",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "main": "app.js",
   "private": true,
   "license": "MIT",
@@ -9,7 +9,7 @@
     "zigbee-clusters": "^3.8.0"
   },
   "scripts": {
-    "test": "node test/run.js && node test/fp300-state.js",
+    "test": "node test/run.js && node test/fp300-state.js && node test/zone-devices.js",
     "build-ui": "python3 tools/build-ui.py"
   },
   "author": "Robert Hertzer",
