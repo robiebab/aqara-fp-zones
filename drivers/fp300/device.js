@@ -846,21 +846,24 @@ class FP300Device extends ZigBeeDevice {
         this._announceApplied = false;
         notify(this, 'fp300.applied', { time: this._time(Date.now()) });
       }
-      const hk = this._housekeepingAllowed();
-      if (hk && this._pendingConfigRead) {
+      // Housekeeping is checked again before every step: the first read (presence) can itself reveal
+      // that someone is there (log of 15 October, kitchen), and then the rest waits for "nobody".
+      if (this._housekeepingAllowed() && this._pendingConfigRead) {
         await this.lumi.readAttributes(['presence', 'pirDetection']).catch(err => this.log('Reading presence failed', err.message));
-        await this._readFirmware();
-        await this._readConfiguration();
-        this._pendingConfigRead = false;
-        this.log('Configuration read from the sensor');
+        if (this._housekeepingAllowed()) {
+          await this._readFirmware();
+          await this._readConfiguration();
+          this._pendingConfigRead = false;
+          this.log('Configuration read from the sensor');
+        }
       }
-      if (hk && this._pendingStructRead) {
+      if (this._housekeepingAllowed() && this._pendingStructRead) {
         await this.lumi.readAttributes(['lumiStruct']);
         this._pendingStructRead = false;
       }
       if (awake) await this._runOneShots();
-      if (awake && hk) await this._refreshReporting();
-      if (awake && hk) await this._runDistancePushJob();
+      if (awake && this._housekeepingAllowed()) await this._refreshReporting();
+      if (awake && this._housekeepingAllowed()) await this._runDistancePushJob();
       this._proactiveFailAt = 0;
       return true;
     } catch (err) {

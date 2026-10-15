@@ -2,7 +2,7 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.6.28**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.6.29**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
@@ -287,7 +287,7 @@ FP300 iconen (Zigbee en Matter) zijn aangeleverd door de gebruiker. De FP400 ico
 
 ## 8j. Onderhoud pas als er niemand is (0.6.28)
 
-Op verzoek van de gebruiker (log 15 oktober): uitlezen van configuratie, firmware, batterijstatus (`0x00F7`) en het verversen van de rapportage (`_pendingConfigRead`, `_pendingStructRead`, `_pendingReportingRefresh`, push job) gebeurt niet meer tijdens een meetsessie, maar op het wakkere moment dat de sensor "niemand" meldt (`_housekeepingAllowed`). Blijft er langer dan 30 minuten iemand (`HOUSEKEEPING_MAX_DEFER_MS`), dan toch. Instellingen van de gebruiker, de afstandsstart en onderhoudsacties wachten nooit. `_askDistanceIfSilent` draait pas ná het verwerken van een bericht, zodat een "niemand" bericht eerst de sessie beëindigt en er daarna geen afstand meer wordt gevraagd. Een stopcommando voor de afstandsmeting bestaat niet; na "niemand" stuurt de sensor in de logs ook geen afstanden meer.
+Op verzoek van de gebruiker (log 15 oktober): uitlezen van configuratie, firmware, batterijstatus (`0x00F7`) en het verversen van de rapportage (`_pendingConfigRead`, `_pendingStructRead`, `_pendingReportingRefresh`, push job) gebeurt niet meer tijdens een meetsessie, maar op het wakkere moment dat de sensor "niemand" meldt (`_housekeepingAllowed`). Blijft er langer dan 30 minuten iemand (`HOUSEKEEPING_MAX_DEFER_MS`), dan toch. Instellingen van de gebruiker, de afstandsstart en onderhoudsacties wachten nooit. `_askDistanceIfSilent` draait pas ná het verwerken van een bericht, zodat een "niemand" bericht eerst de sessie beëindigt en er daarna geen afstand meer wordt gevraagd. Sinds 0.6.29 wordt `_housekeepingAllowed()` vóór elke stap opnieuw gecontroleerd: de eerste uitlezing (aanwezigheid) kan zelf laten zien dat er iemand is (log 15 oktober, keuken), en dan wacht de rest. Een stopcommando voor de afstandsmeting bestaat niet; na "niemand" stuurt de sensor in de logs ook geen afstanden meer.
 
 ## 9. Open punten en onzekerheden
 

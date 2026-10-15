@@ -322,5 +322,9 @@
   "0.6.28": {
     "en": "FP300: status, battery and configuration reads wait until nobody is present, so the sensor can focus on measuring; no distance is asked any more after the sensor reported nobody.",
     "nl": "FP300: status, batterij en configuratie worden pas uitgelezen als er niemand meer is, zodat de sensor zich op het meten kan richten; na 'niemand' wordt er geen afstand meer opgevraagd."
+  },
+  "0.6.29": {
+    "en": "FP300: if the first status read shows someone is present, the other reads wait until nobody is present.",
+    "nl": "FP300: blijkt uit de eerste statusuitlezing dat er iemand is, dan wachten de overige uitlezingen tot er niemand meer is."
   }
 }
