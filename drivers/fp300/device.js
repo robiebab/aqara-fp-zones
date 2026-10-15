@@ -221,7 +221,7 @@ class FP300Device extends ZigBeeDevice {
       this._lastStructAt = Date.now();
       this.setStoreValue('structAt', this._lastStructAt).catch(this.error);
       const struct = parseLumiStruct(attrs[0x00f7]);
-      this._logStruct('0x00f7', struct);
+      if (this._learningUntil) this._logStruct('0x00f7', struct); // full status only as learning diagnostics
       // Tag 0x18 = battery percentage, tag 0x17 = battery voltage (mV), see lumiBattery for PS-S04D in Z2M.
       // Battery: the sensor's own percentage (tag 0x18), like Zigbee2MQTT. If a firmware leaves it out, use the
       // voltage (tag 0x17) with a linear curve (2850 mV = 0 %, 3000 mV = 100 %).
@@ -230,12 +230,16 @@ class FP300Device extends ZigBeeDevice {
       else if (typeof struct[0x17] === 'number' && struct[0x17] > 1000) {
         battery = Math.round(Math.max(0, Math.min(100, ((struct[0x17] - 2850) / 150) * 100)));
       }
-      if (battery !== null) {
+      // like every other value: only set and log the battery when it changed
+      if (battery !== null && battery !== this.getCapabilityValue('measure_battery')) {
         this.log(`Battery: ${battery} %${typeof struct[0x17] === 'number' ? ` (${struct[0x17]} mV)` : ''}`);
         await this.setCapabilityValue('measure_battery', battery).catch(this.error);
       }
     }
-    if (Buffer.isBuffer(attrs[0x00df])) this._logStruct('0x00df', parseLumiStruct(attrs[0x00df]));
+    // 0x00DF: a status message the FP300 sends by itself now and then (contents undocumented; tag 0x2C
+    // looks like the signal strength). The app never asks for it and does not need it, so it is only
+    // logged as diagnostics while AI spatial learning runs.
+    if (Buffer.isBuffer(attrs[0x00df]) && this._learningUntil) this._logStruct('0x00df', parseLumiStruct(attrs[0x00df]));
     if (Buffer.isBuffer(attrs[0x019a]) && attrs[0x019a].length >= 5) {
       this._rangePrefix = attrs[0x019a].readUInt16LE(0);
       await this.setStoreValue('rangePrefix', this._rangePrefix).catch(this.error);
@@ -949,9 +953,10 @@ class FP300Device extends ZigBeeDevice {
    * Diagnostics: log the sensor's status structs as tag=value, marked with whether learning runs,
    * so a tag that only changes while learning can be found by comparing.
    */
+  /** Diagnostics while AI spatial learning runs: every tag of a Lumi status message. */
   _logStruct(name, struct) {
     const tags = Object.keys(struct).map(t => `${Number(t).toString(16).padStart(2, '0')}=${struct[t]}`).join(' ');
-    this.log(`Status ${name} (${this._learningUntil ? 'during learning' : 'not learning'}):`, tags);
+    this.log(`Status ${name} during learning:`, tags);
   }
 
   /**

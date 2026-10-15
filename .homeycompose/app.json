@@ -1,6 +1,6 @@
 {
   "id": "nl.community.aqarafpzones",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "compatibility": ">=12.2.0",
   "sdk": 3,
   "platforms": [

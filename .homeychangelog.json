@@ -354,5 +354,9 @@
   "0.7.1": {
     "en": "FP300: temperature, humidity and light are only set (and logged) when the value changed; the same value again is ignored.",
     "nl": "FP300: temperatuur, luchtvochtigheid en licht worden alleen bijgewerkt (en gelogd) als de waarde veranderd is; dezelfde waarde opnieuw wordt genegeerd."
+  },
+  "0.7.2": {
+    "en": "FP300: status messages the sensor sends by itself are only logged while AI spatial learning runs; the battery is only set and logged when it changed.",
+    "nl": "FP300: statusberichten die de sensor zelf stuurt, worden alleen nog gelogd tijdens AI ruimtelijk inleren; de batterij wordt alleen bijgewerkt en gelogd als hij veranderd is."
   }
 }

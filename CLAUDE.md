@@ -2,7 +2,7 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.7.1**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.7.2**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
@@ -22,6 +22,7 @@ De presence logica van de FP300 is een toestandsmachine. **Voeg hier geen tijdsr
 - Onderhoud (configuratie, firmware, batterij, rapportage) alleen als er geen sessie is (`_housekeepingAllowed`), zonder tijdsuitzondering.
 - Weggehaald in 0.7.0: minuuttimer, PIR hold (2 min), duplicaatvenster (2 s), debounce van de naam, "PIR zonder afstand na 10 s", "aanwezig zonder afstand 2 min", afstand opvragen, herhaald starten, polling, distance push job.
 - Temperatuur, vocht en licht (0.7.1): niet meer via `registerCapability` (die logt en zet elke melding), maar via `_listenMeasurement`: `attr.measuredValue` van het cluster, omrekenen, en alleen zetten en loggen als de waarde veranderd is. Lichtomrekening zoals homey-zigbeedriver: `10^((raw - 1) / 10000)`, afgerond.
+- Statusberichten (0.7.2): `0x00DF` stuurt de sensor uit zichzelf (de app vraagt hem nooit op; inhoud onbekend, tag 0x2C lijkt de signaalsterkte). `0x00F7` en `0x00DF` worden alleen nog volledig gelogd tijdens AI leren (diagnose). De batterij wordt alleen gezet en gelogd als hij veranderd is.
 - Tests: `test/fp300-state.js` speelt echte logs na via `_onFrame` (onderdeel van `npm test`).
 
 ## 0. Belangrijk: versies 0.6.4 tot en met 0.6.6 zijn teruggedraaid

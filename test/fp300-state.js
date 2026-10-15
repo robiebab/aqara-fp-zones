@@ -146,6 +146,16 @@ async function test(name, fn) { await fn(); passed++; console.log(`ok   ${name}`
     assert.deepStrictEqual(d.logs.filter(l => /^measure_/.test(l)), ['measure_luminance 1', 'measure_luminance 100', 'measure_temperature 21.5', 'measure_temperature 21.6']);
   });
 
+  await test('status messages the sensor sends by itself: nothing logged, battery only when it changed', async () => {
+    const d = device({}, () => ({}));
+    const df = Buffer.from('0321740804' + '21b000', 'hex');           // a 0x00DF status (two tags)
+    const f7 = Buffer.from('172199' + '0b' + '182064', 'hex');        // 0x00F7: 2969 mV, 100 %
+    await d._handleLumiAttributes({ 0x00df: df });
+    await d._handleLumiAttributes({ 0x00f7: f7 });
+    await d._handleLumiAttributes({ 0x00f7: f7 });                    // same battery again
+    assert.deepStrictEqual(d.logs.filter(l => /Status|Battery/.test(l)), ['Battery: 100 % (2969 mV)']);
+  });
+
   Date.now = realNow;
   console.log(`\n${passed} state machine tests passed`);
 })().catch(err => { console.error(err); process.exit(1); });
