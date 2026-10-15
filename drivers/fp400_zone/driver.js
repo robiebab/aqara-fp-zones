@@ -52,11 +52,14 @@ class FP400ZoneDriver extends Homey.Driver {
       }
       const saved = await sensor.setZone(target, zone);
       const { uid } = saved[target];
-      return {
+      const device = {
         name: saved[target].name,
         data: { id: `${token}:${uid}` },
         store: { parentToken: token, uid },
       };
+      // An FP300 sees at most one person (only the nearest distance): no people count for its zones
+      if (sensor.kind === 'fp300') device.capabilities = ['alarm_motion'];
+      return device;
     });
   }
 

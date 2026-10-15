@@ -2,7 +2,7 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.6.19**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.6.20**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
@@ -276,6 +276,10 @@ Kent een FP300 het commando niet (ZCL status), dan schrijft de app standaardwaar
 ## 8g. Voortgangsregel AI leren (0.6.14)
 
 Label `learning_status` heet "Voortgang: AI Ruimtelijk inleren". Homey kan een instelling niet inklappen of verbergen; "daarom toont de regel buiten het leren alleen "Niet bezig" (de uitleg hoe je start staat in de hint, achter de i) (`_setLearningIdle`, ook bij elke start van de app), tijdens het leren de voortgang, en na afloop 10 minuten de uitkomst (`LEARNING_RESULT_MS`).
+
+## 8h. Geen aantal personen bij FP300 zones (0.6.20)
+
+De FP300 meet alleen de dichtstbijzijnde persoon, dus een aantal kan alleen 0 of 1 zijn. Nieuwe FP300 zone apparaten krijgen bij het koppelen alleen `alarm_motion` (`capabilities` in `save_zone`); bestaande verliezen `people_count` bij de start (`_fitCapabilities`). De kaart "Aantal personen is veranderd" gaat bij FP300 zones niet meer af. In de zonelijst van de app instellingen staat bij een FP300 alleen "Bezet". FP400 zones houden het aantal.
 
 ## 9. Open punten en onzekerheden
 

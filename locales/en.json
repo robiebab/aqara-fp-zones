@@ -137,7 +137,8 @@
     "mode_range": "Detection range",
     "hint_range": "Where the sensor itself detects presence. Walk through the room: the block you stand in lights up. Paint the blocks where it should see you and save. After that the sensor works on its own presence, without continuous distance measurement.",
     "range_info": "Detects from __from__ to __to__ m (__count__ blocks)",
-    "range_none": "No blocks chosen yet"
+    "range_none": "No blocks chosen yet",
+    "occupied_plain": "Occupied"
   },
   "actions": {
     "identify": "Identify",

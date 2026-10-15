@@ -137,7 +137,8 @@
     "mode_range": "Detectiebereik",
     "hint_range": "Waar de sensor zelf aanwezigheid ziet. Loop door de ruimte: het blok waarin je staat licht op. Kleur de blokken waar hij je moet zien en sla op. Daarna werkt de sensor op zijn eigen aanwezigheid, zonder doorlopende afstandsmeting.",
     "range_info": "Detecteert van __from__ tot __to__ m (__count__ blokken)",
-    "range_none": "Nog geen blokken gekozen"
+    "range_none": "Nog geen blokken gekozen",
+    "occupied_plain": "Bezet"
   },
   "actions": {
     "identify": "Identificeren",

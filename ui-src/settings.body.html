@@ -355,7 +355,9 @@ function onHomeyReady(Homey) {
       row.innerHTML = '<i></i><span></span><small></small>';
       row.querySelector('i').style.background = FP_ZONE_COLORS[(id - 1) % 8];
       row.querySelector('span').textContent = z.name;
-      row.querySelector('small').textContent = st.available ? (st.occupied ? t('occupied', { count: st.count }) : t('empty')) : t('unknown');
+      // FP300 zones have no people count (at most one person): just "Occupied"
+      var busy = kind === 'fp300' ? t('occupied_plain') : t('occupied', { count: st.count });
+      row.querySelector('small').textContent = st.available ? (st.occupied ? busy : t('empty')) : t('unknown');
       row.addEventListener('click', function () { select(id); });
       box.appendChild(row);
     });
