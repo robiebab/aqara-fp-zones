@@ -346,5 +346,9 @@
   "0.6.34": {
     "en": "FP300: configuration and reporting refresh at most once a day, firmware once a week, battery every 4 hours, also over app restarts; less traffic, longer battery life.",
     "nl": "FP300: configuratie en rapportage verversen hooguit één keer per dag, firmware één keer per week, batterij elke 4 uur, ook over een herstart van de app heen; minder verkeer, langere batterijduur."
+  },
+  "0.7.0": {
+    "en": "FP300 presence logic rebuilt on states instead of timers: only a change of mmWave or PIR counts, repeated reports are ignored, absence is checked with the sensor right away, the motion alarm name changes immediately, and the measurement only ends when mmWave and PIR are both off.",
+    "nl": "FP300 aanwezigheidslogica opnieuw opgebouwd op statussen in plaats van timers: alleen een verandering van mmWave of PIR telt, herhaalde meldingen worden genegeerd, afwezigheid wordt direct bij de sensor gecontroleerd, de naam van het bewegingsalarm wisselt meteen, en de meting eindigt alleen als mmWave en PIR allebei uit zijn."
   }
 }

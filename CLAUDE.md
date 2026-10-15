@@ -2,11 +2,26 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.6.34**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.7.0**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
 ---
+
+## 00. FP300: statussen, geen timers (0.7.0, uitdrukkelijk verzoek van de gebruiker)
+
+De presence logica van de FP300 is een toestandsmachine. **Voeg hier geen tijdsregels aan toe** (geen debounce, geen "binnen X seconden", geen hold, geen timeout als beslissing); de gebruiker heeft dat expliciet afgewezen omdat je dan altijd te vroeg of te laat bent.
+
+- Toestand: `_mmwave` en `_pir` (true/false/null = nog onbekend), `_session`.
+- `_handleLumiAttributes`: een melding telt alleen als hij de toestand **verandert**; dezelfde toestand opnieuw (dubbele meldingen, de herhaalde "PIR on") doet niets en wordt niet gelogd.
+- `_onStateChange`: iets aan en geen sessie → `_startSession` (afstandsmeting starten als die gewenst is) en `_applyMotionAlarm`. Beide uit → `_verifyAbsence`: direct `presence` en `pirDetection` teruglezen (het uit bericht is een wakker moment; geen eigen timeout); het antwoord loopt door dezelfde code. Pas als beide echt uit zijn: alarm uit, `_endSession`. `_verifyAbsence` nooit awaiten vanuit de handler (deadlock).
+- Bewegingsalarm (`_motionValue`, "Bewegingsalarm bij"): aan zodra de bron aan is; uit zodra de bron uit is, behalve als dat "niemand" betekent: dan pas na de controle.
+- Naam van het alarm (`_motionTitleKey`, `_applyMotionTitle`): direct bij elke verandering, geen debounce.
+- PIR kaarten (`_pirCard`) en conditie (`pirActive()`): alleen op verandering van de PIR status.
+- Afstandsmeting: start bij het begin van een sessie. De enige tijdsregel is `TRACK_RESTART_MS` (5 min): de FP300 stopt zijn meting zelf na 20 tot 30 minuten zonder dat te melden; daarom wordt hij bij een bericht van de sensor opnieuw gestart als de laatste start ouder is (`_keepMeasurementRunning`). Er wordt nooit iets gestopt op tijd en nooit iets buiten een wakker moment verstuurd. Geen afstand meer opvragen (gaf oude waarden).
+- Onderhoud (configuratie, firmware, batterij, rapportage) alleen als er geen sessie is (`_housekeepingAllowed`), zonder tijdsuitzondering.
+- Weggehaald in 0.7.0: minuuttimer, PIR hold (2 min), duplicaatvenster (2 s), debounce van de naam, "PIR zonder afstand na 10 s", "aanwezig zonder afstand 2 min", afstand opvragen, herhaald starten, polling, distance push job.
+- Tests: `test/fp300-state.js` speelt echte logs na via `_onFrame` (onderdeel van `npm test`).
 
 ## 0. Belangrijk: versies 0.6.4 tot en met 0.6.6 zijn teruggedraaid
 

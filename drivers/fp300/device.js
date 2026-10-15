@@ -17,29 +17,18 @@ const { buildTimeReadResponse } = require('../../lib/zigbeeTime');
 
 const newUid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const VIEWER_TRACK_EVERY_MS = 5 * 60 * 1000;
-const HOUSEKEEPING_MAX_DEFER_MS = 30 * 60 * 1000;
 const CONFIG_READ_EVERY_MS = 24 * 60 * 60 * 1000;        // configuration read at most once a day
 const REPORTING_REFRESH_EVERY_MS = 24 * 60 * 60 * 1000;  // reporting refresh at most once a day
 const FIRMWARE_READ_EVERY_MS = 7 * 24 * 60 * 60 * 1000;  // firmware version at most once a week
-const ABSENCE_CHECK_TIMEOUT_MS = 4000; // reading back presence/PIR after an "off" report
-const DUPLICATE_MS = 2000; // same presence/PIR value again within this time: the same report repeated
-const STALE_DISTANCE_MS = 2 * 60 * 1000; // present, but no distance this long: restart the measurement early
-// The FP300 ends a measurement by itself after a while; the app keeps it running according to the
-// chosen "Measure distance" mode by starting it again every 5 minutes. Not a setting: users cannot
-// see when a measurement starts or ends, they only choose WHEN distance must be measured.
+// The FP300 ends a distance measurement by itself after a while (20 to 30 minutes in user reports),
+// without telling. That is the one rule here that cannot follow a sensor state: while the measurement
+// is wanted, it is started again at the next message from the sensor once the last start is older
+// than this. Nothing is sent outside a wake moment, and nothing is ever stopped by time.
 const TRACK_RESTART_MS = 5 * 60 * 1000;
-const PIR_HOLD_MS = 2 * 60 * 1000;
-const MOTION_TITLE_DEBOUNCE_MS = 300; // only merges reports that arrive at practically the same moment
 const MOTION_TITLES = {
   en: { none: 'Motion', mmwave: 'Motion: mmWave', pir: 'Motion: PIR', both: 'Motion: mmWave + PIR' },
   nl: { none: 'Beweging', mmwave: 'Beweging: mmWave', pir: 'Beweging: PIR', both: 'Beweging: mmWave + PIR' },
 };
-const MOVE_STALE_MS = 10 * 1000; // PIR movement with no distance for this long: the measurement stopped
-const START_DEBOUNCE_MS = 5 * 1000;
-const DISTANCE_SILENT_MS = 5 * 1000;
-const REPEAT_AWAKE_MS = 2000; // repeated starts only within 2 s after a message from the sensor
-const DISTANCE_POLLING = false; // see _onActivity: polled values turned out to be stale
-const DISTANCE_POLL_MS = 3 * 1000; // during a session, ask a non-pushing sensor for the distance this often // in a session without a distance this long: ask the sensor // never send two starts within this time // a PIR detection without a following "PIR = 0" counts at most this long
 /*
  * AI spatial learning progress.
  * Logs of 9 October 2026 showed: the FP300 confirms the start with attribute 0x0157 = 1 and keeps
@@ -91,9 +80,10 @@ class FP300Device extends ZigBeeDevice {
     this.tracker.update(this._zonePresence(), this.getCapabilityValue('target_distance'), Date.now());
     // absence timeouts of zones run on Homey's clock, not on sensor reports
     this._syncZoneTimer(); // only runs while this sensor has zones
-    // Keep the distance measurement running while someone is present, without waiting for a
-    // message from the sensor (the same way the settings page does it, which proved to work).
-    this._trackTimer = this.homey.setInterval(() => this._keepTrackingAlive(), 60 * 1000);
+    // What the sensor last reported: null until the first report or read after this start.
+    this._mmwave = null;
+    this._pir = null;
+    this._session = false;
     // Read the real configuration (and firmware) only when it was not done in the last 24 hours:
     // the settings do not change by themselves, and every read costs the sensor battery.
     this._pendingConfigRead = this._due('configReadAt', CONFIG_READ_EVERY_MS);
@@ -186,75 +176,43 @@ class FP300Device extends ZigBeeDevice {
     }
     if (clusterId === AqaraLumiCluster.ID && !header.clusterSpecific && [0x01, 0x0a].includes(header.cmdId)) {
       const attrs = parseAttributeRecords(frame, header);
-      if (attrs[0x015f] !== undefined && header.cmdId === 0x0a) this._distancePushAt = Date.now(); // pushed, not asked
       await this._handleLumiAttributes(attrs);
-      this._askDistanceIfSilent(); // after handling: a "nobody present" frame has ended the session
+      this._keepMeasurementRunning();
       this._scheduleFlush(true);
       // Reports are consumed here, read responses go on so readAttributes() resolves.
       return header.cmdId === 0x0a;
     }
-    this._askDistanceIfSilent();
+    this._keepMeasurementRunning();
     this._scheduleFlush(true);
     return false;
   }
 
-  /**
-   * The FP300 sometimes sends the same presence or PIR report two or three times within a second
-   * (log of 15 October). A report with the same value as the previous one within DUPLICATE_MS is
-   * the same message again: it is dropped, so it is not logged or handled twice. (A "PIR on" much
-   * later while the PIR is still on is a real state repeat; that is handled further on.)
-   */
-  _dropDuplicates(attrs) {
-    const now = Date.now();
-    this._lastReport = this._lastReport || {};
-    for (const id of [0x0142, 0x014d]) {
-      if (attrs[id] === undefined) continue;
-      const last = this._lastReport[id];
-      if (last && last.value === attrs[id] && now - last.at < DUPLICATE_MS) delete attrs[id];
-      else this._lastReport[id] = { value: attrs[id], at: now };
-    }
-    return attrs;
-  }
 
+  /*
+   * Presence (mmWave, 0x0142) and PIR (0x014D) are handled as STATES. A report only counts when it
+   * changes the state the app already has; the same state reported again (the FP300 repeats reports,
+   * and repeats "PIR on" while the PIR stays on) changes nothing and is not logged.
+   *
+   *   one of them goes on, no session yet  -> motion alarm on, session on, distance measurement starts
+   *   while one of them is on               -> the session runs; the measurement is kept running
+   *   both report off                       -> read both back from the sensor right away (that report is
+   *                                            a wake moment); only when both really are off: motion
+   *                                            alarm off, session off, the measurement is not continued
+   */
   async _handleLumiAttributes(attrs) {
-    this._dropDuplicates(attrs);
-    if (attrs[0x0142] !== undefined) {
-      const present = attrs[0x0142] === 1;
-      this.log(`mmWave presence ${present ? 'on' : 'off'}`);
-      if (present) this._movementWhileLearning();
-      if (this._learningUntil) {
-        if (!present && !this._learningEmptySince) this._learningEmptySince = Date.now();
-        if (present) { this._learningEmptySince = null; this._learningMovementAt = Date.now(); }
-      }
-      this._mmwave = present;
-      await this._updateMotionAlarm('mmWave');
-      if (present) this._onActivity('mmWave');
-      else this._requestAbsenceCheck('mmWave off');
-      this._updateZones();
+    const changes = [];
+    if (attrs[0x0142] !== undefined && (attrs[0x0142] === 1) !== this._mmwave) {
+      this._mmwave = attrs[0x0142] === 1;
+      changes.push('mmWave');
+      this.log(`mmWave presence ${this._mmwave ? 'on' : 'off'}`);
     }
-    // PIR movement (0x014D): the trigger of a tracking session (see _onActivity).
-    if (attrs[0x014d] !== undefined) {
-      const moving = attrs[0x014d] === 1;
-      // "PIR on" while the PIR was already on is the sensor repeating its state (seen in the log of
-      // 14 October: exactly 60.0 s after the first "on", without an "off" in between). That only
-      // refreshes the state; it is not new movement, so no flow card and no measurement restart.
-      const repeat = moving && this.pirActive();
-      this.log(`PIR ${moving ? 'on' : 'off'}${repeat ? ' (repeated state, not new movement)' : ''}`);
-      if (!repeat) this._pirFlow(moving);
-      this._pirActive = moving;
-      this._pirAt = Date.now();
-      await this._updateMotionAlarm('PIR');
-      if (moving && repeat) {
-        this._updateZones();
-      } else if (moving) {
-        this._movementWhileLearning();
-        if (this._learningUntil) { this._learningEmptySince = null; this._learningMovementAt = Date.now(); }
-        this._onActivity('PIR');
-      } else {
-        this._requestAbsenceCheck('PIR off');
-      }
-      this._updateZones();
+    if (attrs[0x014d] !== undefined && (attrs[0x014d] === 1) !== this._pir) {
+      this._pir = attrs[0x014d] === 1;
+      changes.push('PIR');
+      this.log(`PIR ${this._pir ? 'on' : 'off'}`);
+      this._pirCard();
     }
+    if (changes.length) await this._onStateChange(changes.join(' + '));
     if (attrs[0x015f] !== undefined) {
       await this._setDistance(Math.round(attrs[0x015f]) / 100);
     }
@@ -311,72 +269,123 @@ class FP300Device extends ZigBeeDevice {
     }
   }
 
-  /* ------------------------------------------------------------ distance tracking */
 
-  /** Every minute: someone present and the measurement due for a restart? Send it right away. */
-  _keepTrackingAlive() {
-    this._updateMotionAlarm('timer').catch(this.error);
-    // normally only while someone is present; with "keep running" also in an empty room
-    const always = this._distanceMode() === 'always';
-    if (this._session) this._checkSessionEnd('timer'); // e.g. a PIR detection without "PIR off" got too old
-    if (!this._session && !always) return;
-    this._maybeRestartTracking();
-    if (!this._pending.has('trackDistance')) return;
-    // A sleeping sensor rarely takes a message outside its own wake moments. After a failed try,
-    // wait 5 minutes before trying on our own again; the next message from the sensor flushes anyway.
-    if (Date.now() - (this._proactiveFailAt || 0) < 5 * 60 * 1000) return;
-    this._flush().then(ok => { if (!ok) this._proactiveFailAt = Date.now(); }).catch(this.error);
+
+  /** Someone is there according to the sensor: mmWave or PIR on. */
+  _present() {
+    return this._mmwave === true || this._pir === true;
+  }
+
+  async _onStateChange(source) {
+    const present = this._present();
+    if (present) {
+      if (this._mmwave) this._movementWhileLearning();
+      if (this._learningUntil) { this._learningEmptySince = null; this._learningMovementAt = Date.now(); }
+    } else if (this._learningUntil && !this._learningEmptySince) {
+      this._learningEmptySince = Date.now();
+    }
+    this._applyMotionTitle().catch(err => this.log('Motion alarm name not updated', err.message));
+    if (present) {
+      if (!this._session) this._startSession(source);
+      await this._applyMotionAlarm(source);
+    } else {
+      this._verifyAbsence(source); // not awaited: the read answer passes through this same code
+    }
+    this._updateZones();
+  }
+
+  _startSession(source) {
+    this._session = true;
+    if (this._distanceMode() === 'off') return this.log(`Session started (${source}): distance measurement is switched off in the settings`);
+    if (this._learningBusy()) return this.log(`Session started (${source}): no measurement, AI spatial learning is busy`);
+    if (this.getSetting('detection_mode') === '2') return this.log(`Session started (${source}): no measurement, "Detection with" is PIR only (radar off)`);
+    if (!this._distanceWanted()) return this.log(`Session started (${source}): no distance needed (no zones), presence only`);
+    this._pending.set('trackDistance', 1);
+    this.log(`Session started (${source}): starting the distance measurement`);
+  }
+
+  _endSession(source) {
+    if (!this._session) return;
+    this._session = false;
+    this._pending.delete('trackDistance');
+    this.log(`Session ended (${source}): mmWave and PIR off, the measurement is not continued`);
+  }
+
+  /** Both reported off: read both back from the sensor; only if both really are off, switch off. */
+  async _verifyAbsence(source) {
+    if (this._verifying) return;
+    if (!this._session && this.getCapabilityValue('alarm_motion') !== true) return; // nothing to switch off
+    this._verifying = true;
+    try {
+      if (this.lumi) await this.lumi.readAttributes(['presence', 'pirDetection']);
+    } catch (err) {
+      this.log(`Check after "${source} off" not answered, using the reports:`, err.message);
+    } finally {
+      this._verifying = false;
+    }
+    // The answer went through _handleLumiAttributes: if it changed a state, that has been handled there.
+    if (this._present()) return this.log(`Checked the sensor after "${source} off": still someone there`);
+    this.log(`Checked the sensor after "${source} off": mmWave off, PIR off`);
+    await this._applyMotionAlarm(source, true);
+    this._endSession(source);
+    this._updateZones();
+  }
+
+  /** At a wake moment: keep the measurement running while it is wanted (see TRACK_RESTART_MS). */
+  _keepMeasurementRunning() {
+    const wanted = this._session || this._distanceMode() === 'always';
+    if (!wanted || !this._distanceWanted() || this._learningBusy()) return;
+    if (this._distanceMode() === 'off' || this.getSetting('detection_mode') === '2') return;
+    if (Date.now() - this._lastTrackStart < TRACK_RESTART_MS || this._pending.has('trackDistance')) return;
+    this._pending.set('trackDistance', 1);
+    this.log('Measurement continued (still someone there)');
+  }
+
+  /** PIR flow cards: fired on a change of the PIR state only. */
+  _pirCard() {
+    const card = this.driver && (this._pir ? this.driver.pirOnTrigger : this.driver.pirOffTrigger);
+    if (card) card.trigger(this, {}, {}).catch(this.error);
+  }
+
+  /** For the condition card: does the PIR report movement right now? */
+  pirActive() {
+    return this._pir === true;
   }
 
   /**
-   * Someone is here when the mmWave presence says so, or when the PIR detected movement recently.
-   * A PIR detection counts until the sensor reports PIR = 0, at most PIR_HOLD_MS.
+   * The motion alarm (alarm_motion, also used by Homey's zones/rooms) follows the setting "Motion alarm
+   * on": mmWave, PIR or both. It goes on as soon as its source reports on. It goes off when its source
+   * reports off; when that means nobody at all is there, only after the sensor confirmed it.
    */
-  _effectivePresence() {
-    if (this._mmwavePresence() === true) return true;
-    if (this._pirActive && Date.now() - (this._pirAt || 0) <= PIR_HOLD_MS) return true;
-    if (this._pirActive) this._pirActive = false;
-    // unknown (null) before the first report: treat as "not known", like before
-    return this._mmwavePresence() === null ? null : false;
+  _motionValue(mode = this._motionSource()) {
+    if (mode === 'pir') return this._pir === true;
+    if (mode === 'both') return this._present();
+    return this._mmwave === true;
+  }
+
+  async _applyMotionAlarm(source, confirmed = false, mode = this._motionSource()) {
+    const value = this._motionValue(mode);
+    if (value === this.getCapabilityValue('alarm_motion')) return;
+    if (!value && !this._present() && !confirmed) return; // nobody: _verifyAbsence switches it off
+    this.log(`Motion alarm ${value ? 'on' : 'off'} (${source}, motion alarm on: ${mode})`);
+    await this.setCapabilityValue('alarm_motion', value).catch(this.error);
+    this._updateZones(); // zones follow the main sensor at once
+  }
+
+  /** Name of the motion alarm: what the sensor reports right now (Motion, mmWave, PIR or both). */
+  _motionTitleKey() {
+    if (this._mmwave && this._pir) return 'both';
+    if (this._mmwave) return 'mmwave';
+    if (this._pir) return 'pir';
+    return 'none';
   }
 
   /** The sensor's own presence report (0x0142). Kept apart from the motion alarm, which can include the PIR. */
   _mmwavePresence() {
-    if (this._mmwave === undefined) this._mmwave = this.getCapabilityValue('alarm_motion');
     return this._mmwave;
   }
 
-  /**
-   * The motion alarm (alarm_motion) is what Homey's own zones (rooms) use for "zone becomes active".
-   * Setting motion_source decides what drives it:
-   *   mmwave  the sensor's presence report (0x0142), also when someone sits still (default)
-   *   pir     the PIR only (0x014D): on with movement, off when the PIR reports off (or after 2 minutes)
-   *   both    on with the first of the two, off when both are off
-   */
-  /**
-   * Show on the device what the sensor sees right now, by changing the NAME of the motion alarm
-   * (no extra capability): "Motion", "Motion: mmWave", "Motion: PIR" or "Motion: mmWave + PIR".
-   * Homey calls setCapabilityOptions expensive, so it only runs when the source really changes,
-   * and reports within 0.3 s of each other are combined.
-   */
-  _motionTitleKey() {
-    // Exactly what the sensor reports, nothing more: PIR on until the sensor reports PIR off,
-    // mmWave on until it reports mmWave (presence) off. Both on = both.
-    const mmwave = this._mmwavePresence() === true;
-    const pir = this._pirActive === true;
-    if (mmwave && pir) return 'both';
-    if (mmwave) return 'mmwave';
-    if (pir) return 'pir';
-    return 'none';
-  }
 
-  _scheduleMotionTitle() {
-    if (this._motionTitleTimer) return;
-    this._motionTitleTimer = this.homey.setTimeout(() => {
-      this._motionTitleTimer = null;
-      this._applyMotionTitle().catch(err => this.log('Motion title not updated', err.message));
-    }, MOTION_TITLE_DEBOUNCE_MS);
-  }
 
   async _applyMotionTitle(force = false) {
     const key = this._motionTitleKey();
@@ -393,24 +402,6 @@ class FP300Device extends ZigBeeDevice {
     return ['mmwave', 'pir', 'both'].includes(v) ? v : 'mmwave';
   }
 
-  async _updateMotionAlarm(source, confirmed = false) {
-    this._scheduleMotionTitle();
-    const mode = this._motionSource();
-    const mmwave = this._mmwavePresence();
-    const pir = this.pirActive();
-    let value;
-    if (mode === 'pir') value = pir;
-    else if (mode === 'both') value = mmwave === true || pir ? true : (mmwave === null ? null : false);
-    else value = mmwave;
-    if (value === null || value === undefined || value === this.getCapabilityValue('alarm_motion')) return;
-    // Going OFF is only done after the sensor confirmed it (see _requestAbsenceCheck)
-    // (never awaited here: the check's own read answer passes through this same code path)
-    if (value === false && !confirmed) { this._requestAbsenceCheck(source); return; }
-    const why = mode === 'pir' ? 'PIR' : (value && mmwave !== true ? 'PIR' : source);
-    this.log(`Motion alarm ${value ? 'on' : 'off'} (${why}, motion alarm on: ${mode})`);
-    await this.setCapabilityValue('alarm_motion', value).catch(this.error);
-    this._updateZones(); // zones follow the main sensor at once
-  }
 
   _updateZones() {
     this._publishZones(this.tracker.update(this._zonePresence(), this.getCapabilityValue('target_distance'), Date.now()));
@@ -426,153 +417,13 @@ class FP300Device extends ZigBeeDevice {
     return this.getCapabilityValue('alarm_motion');
   }
 
-  /*
-   * Tracking session (the logic the user asked for):
-   *   1. PIR (or mmWave) sees someone and no session runs  -> start the distance measurement, session on
-   *   2. while the session runs the measurement is kept alive: restart every 5 minutes (TRACK_RESTART_MS),
-   *      earlier when no distance came in for 2 minutes, and right away when the PIR sees movement
-   *      but there was no distance for 10 seconds (the measurement probably stopped)
-   *   3. mmWave presence off AND PIR off                    -> session off, no more restarts
-   *      (there is no known command to stop the measurement; it ends by itself)
-   *   4. the PIR sees someone again                        -> back to 1
-   */
-  _onActivity(source) {
-    const now = Date.now();
-    const auto = this._distanceMode() !== 'off';
-    if (!this._session) {
-      this._session = true;
-      this._sessionStartAt = now;
-      // Polling the distance (0.5.22) is off: the log of 10 October showed the polled value stays the
-      // same (1.37 m) while walking 4 m up and down, so it is the last stored value, not a live one.
-      if (DISTANCE_POLLING) this._startDistancePolling();
-      this._startRepeatStarts();
-      if (!auto) return this.log(`Session started (${source}): automatic measurement is switched off in the settings`);
-      if (this._learningBusy()) return this.log(`Session started (${source}): no measurement, AI spatial learning is busy`);
-      if (this.getSetting('detection_mode') === '2') return this.log(`Session started (${source}): no measurement, "Detection with" is PIR only (radar off)`);
-      if (!this._distanceWanted()) this.log(`Session started (${source}): no distance needed (no zones), presence only`);
-      else this._sendTrackStart(`Session started (${source}): starting the measurement`);
-    } else if (auto && !this._learningBusy() && now - this._lastDistanceAt > MOVE_STALE_MS && now - this._lastTrackStart > MOVE_STALE_MS) {
-      // movement, but no distance for a while: the measurement stopped, restart it now
-      const since = this._lastDistanceAt ? `for ${Math.round((now - this._lastDistanceAt) / 1000)} s` : 'yet (none since the app started)';
-      this._sendTrackStart(`Movement (${source}) without a distance ${since}: restarting the measurement`);
-    }
-    this._maybeRestartTracking();
-    this._scheduleFlush(true);
-  }
 
-  /**
-   * Some FP300s take the start command but do not push distances (seen on the hallway sensor,
-   * 10 October 2026). While a session runs and no distance came in for 5 seconds, ask for the
-   * distance on the next wake moment (at most every 5 seconds). The answer passes through
-   * _onFrame/_handleLumiAttributes like a report, so zones get it the same way.
-   */
-  _askDistanceIfSilent() {
-    const now = Date.now();
-    if (!this._session || this._learningBusy() || !this.lumi || !this._distanceWanted()) return;
-    // Only when the radar itself sees someone. With only the PIR on, the sensor answers its last stored
-    // distance (log of 15 October: 0.87 m twice while the radar saw nobody), which could switch a zone on.
-    if (this._mmwavePresence() !== true) return;
-    if (now - this._lastDistanceAt < DISTANCE_SILENT_MS || now - (this._distanceAskAt || 0) < DISTANCE_SILENT_MS) return;
-    this._distanceAskAt = now;
-    this.lumi.readAttributes(['targetDistance'])
-      .then(v => this.log(`Distance asked from the sensor: ${typeof v.targetDistance === 'number' ? `${v.targetDistance} cm` : 'no value'}`))
-      .catch(err => this.log('Asking the distance failed', err.message));
-  }
 
-  /*
-   * Repeated start (workaround the user asked for, also advised on the Home Assistant forum):
-   * for a sensor that does not push distances by itself, send the start again every
-   * repeat_start_seconds during a session and ask for the distance shortly after each start.
-   * A sensor counts as "not pushing" when no pushed distance came in for 8 seconds while measuring.
-   * The log tells per session how many starts gave a new value, so we can see if it helps.
-   */
-  _startRepeatStarts() {
-    // Repeated start (0.5.26) is no longer offered in the settings: it never gave new distances.
-    if (this._repeatTimer || this.getSetting('repeat_start') !== true || !this._distanceWanted()) return;
-    this._repeatStats = { starts: 0, changed: 0, same: 0, failed: 0 };
-    this._repeatTimer = this.homey.setInterval(() => this._repeatStart(), 1000);
-  }
 
-  _stopRepeatStarts() {
-    if (this._repeatTimer) this.homey.clearInterval(this._repeatTimer);
-    this._repeatTimer = null;
-    const st = this._repeatStats;
-    if (st && st.starts) {
-      this.log(`Repeated starts this session: ${st.starts} starts, ${st.changed} new distances, ${st.same} unchanged, ${st.failed} not reached`);
-    }
-  }
 
-  async _repeatStart() {
-    const now = Date.now();
-    if (!this._session) return this._stopRepeatStarts();
-    if (!this._distanceWanted()) return;
-    if (this._repeatBusy || this._learningBusy() || !this.lumi) return;
-    const every = Math.max(5, Number(this.getSetting('repeat_start_seconds') || 10)) * 1000;
-    if (now - (this._distancePushAt || 0) < 8000) return; // the sensor pushes: no workaround needed
-    if (now - (this._sessionStartAt || 0) < 8000) return; // give the first start a chance to push
-    if (now - this._lastTrackStart < every) return;
-    // Only right after the sensor sent something (then it listens). A write to a sleeping FP300 is
-    // not lost: Homey keeps it and delivers it at the next wake, possibly after the session ended.
-    // The log of 14 October showed such a burst re-starting the measurement 1 s after "nobody".
-    if (now - (this._wake && this._wake.lastMessage ? this._wake.lastMessage : 0) > REPEAT_AWAKE_MS) return;
-    this._repeatBusy = true;
-    const before = this.getCapabilityValue('target_distance');
-    try {
-      await this.lumi.writeAttributes({ trackDistance: 1 });
-      this._lastTrackStart = Date.now();
-      this._repeatStats.starts++;
-      await new Promise(resolve => this.homey.setTimeout(resolve, 1500));
-      const v = await this.lumi.readAttributes(['targetDistance'], { timeout: 5000 });
-      const value = typeof v.targetDistance === 'number' ? Math.round(v.targetDistance) / 100 : null;
-      if (value !== null && value !== before) this._repeatStats.changed++;
-      else this._repeatStats.same++;
-      this.log(`Repeated start: distance ${value === null ? 'none' : `${value} m`}${value === before ? ' (unchanged)' : ''}`);
-    } catch (err) {
-      this._repeatStats.failed++;
-      this.log('Repeated start not reached:', err.message);
-    } finally {
-      this._repeatBusy = false;
-    }
-  }
 
-  /**
-   * Some FP300s (the hallway sensor) never push distances; asking only works when the sensor is
-   * awake, and without pushes there are few wake moments. During a session, ask every 3 seconds on
-   * our own: a sensor in a measurement may poll its parent often enough to take the question.
-   * Skipped while the sensor pushes distances itself. After 3 failed tries in a row, pause 30 s.
-   */
-  _startDistancePolling() {
-    if (this._pollTimer) return;
-    this._pollFails = 0;
-    this._pollStats = { ok: 0, failed: 0 };
-    this._pollTimer = this.homey.setInterval(() => this._pollDistance(), DISTANCE_POLL_MS);
-  }
 
-  _stopDistancePolling() {
-    if (this._pollTimer) this.homey.clearInterval(this._pollTimer);
-    this._pollTimer = null;
-    if (this._pollStats && (this._pollStats.ok || this._pollStats.failed)) {
-      this.log(`Distance polling this session: ${this._pollStats.ok} answered, ${this._pollStats.failed} not reached`);
-    }
-  }
 
-  _pollDistance() {
-    const now = Date.now();
-    if (!this._session) return this._stopDistancePolling();
-    if (this._learningBusy() || this._pollBusy || !this.lumi) return;
-    if (now - (this._distancePushAt || 0) < 10 * 1000) return; // the sensor pushes, no need to ask
-    if (now - this._lastDistanceAt < DISTANCE_POLL_MS - 500) return; // got one recently
-    if (now < (this._pollPausedUntil || 0)) return;
-    this._pollBusy = true;
-    this.lumi.readAttributes(['targetDistance'], { timeout: 5000 })
-      .then(() => { this._pollFails = 0; this._pollStats.ok++; })
-      .catch(() => {
-        this._pollStats.failed++;
-        this._pollFails++;
-        if (this._pollFails >= 3) { this._pollPausedUntil = Date.now() + 30 * 1000; this._pollFails = 0; }
-      })
-      .finally(() => { this._pollBusy = false; });
-  }
 
   /**
    * Reporting setup:
@@ -607,168 +458,11 @@ class FP300Device extends ZigBeeDevice {
     this.setStoreValue('reportingRefreshedAt', Date.now()).catch(this.error);
   }
 
-  /*
-   * "Report distance by itself" (setting distance_push), for sensors that do not push distances.
-   * The FP300 answers "configure reporting" for 0x015F with INSUFFICIENT_SPACE: its table of
-   * automatic reports is full. ZCL lets you remove an entry with maximum interval 0xFFFF. So:
-   *   1. read the current table entries (logged, for diagnosis)
-   *   2. try to add 0x015F; if there is no space, remove the standard report of light, then humidity,
-   *      then temperature (one at a time, retrying after each) until 0x015F fits
-   *   3. switching the setting off removes 0x015F again and restores the removed reports
-   * The FP300 also has Aqara's own reporting for temperature, humidity and light (sampling settings),
-   * so those values may keep coming; if not, switching the setting off restores them.
-   * Each step needs the sensor awake, so the job continues on the next wake when a step times out.
-   */
-  async _runDistancePushJob() {
-    const job = this._pushJob;
-    if (!job) return;
-    const ep = this.zclNode.endpoints[1];
-    const std = {
-      illuminance: { cluster: ep.clusters[CLUSTER.ILLUMINANCE_MEASUREMENT.NAME], restore: { minInterval: 10, maxInterval: 3600, minChange: 1000 } },
-      humidity: { cluster: ep.clusters[CLUSTER.RELATIVE_HUMIDITY_MEASUREMENT.NAME], restore: { minInterval: 60, maxInterval: 3600, minChange: 100 } },
-      temperature: { cluster: ep.clusters[CLUSTER.TEMPERATURE_MEASUREMENT.NAME], restore: { minInterval: 60, maxInterval: 3600, minChange: 10 } },
-    };
-    const freed = this.getStoreValue('freedReporting') || [];
-    const isTimeout = err => !/^[A-Z_]+$/.test(String(err && err.message)); // ZCL statuses are UPPER_CASE
 
-    if (job === 'enable') {
-      await this._logReportingTable(std);
-      for (;;) {
-        try {
-          await this.lumi.configureReporting({ targetDistance: { minInterval: 0, maxInterval: 3600, minChange: 1 } });
-          this.log(`Distance reporting added to the sensor${freed.length ? ` (removed: ${freed.join(', ')})` : ''}`);
-          await this.setStoreValue('freedReporting', freed);
-          this._pushJob = null;
-          const names = freed.map(n => this.homey.__(`fp300.report_${n}`));
-          notify(this, 'fp300.push_on', { removed: names.length ? names.join(', ') : '-' });
-          return;
-        } catch (err) {
-          if (isTimeout(err)) throw err; // sensor fell asleep: continue next wake
-          if (err.message !== 'INSUFFICIENT_SPACE') {
-            this.log('Distance reporting not accepted:', err.message);
-            this._pushJob = freed.length ? 'disable' : null;
-            this.setSettings({ distance_push: false }).catch(this.error);
-            notify(this, 'fp300.push_failed', { reason: err.message });
-            return;
-          }
-          const next = ['illuminance', 'humidity', 'temperature'].find(n => !freed.includes(n) && std[n].cluster);
-          if (!next) {
-            this.log('No room for distance reporting, even after removing light, humidity and temperature reports');
-            this._pushJob = 'disable'; // put everything back
-            this.setSettings({ distance_push: false }).catch(this.error);
-            notify(this, 'fp300.push_failed', { reason: 'INSUFFICIENT_SPACE' });
-            return;
-          }
-          try {
-            await std[next].cluster.configureReporting({ measuredValue: { minInterval: 0, maxInterval: 0xffff, minChange: 0 } });
-          } catch (e) {
-            if (isTimeout(e)) throw e;
-            this.log(`Removing the ${next} report gave`, e.message);
-          }
-          freed.push(next);
-          await this.setStoreValue('freedReporting', freed);
-          this.log(`Removed the standard ${next} report to make room`);
-        }
-      }
-    }
 
-    if (job === 'disable') {
-      try {
-        await this.lumi.configureReporting({ targetDistance: { minInterval: 0, maxInterval: 0xffff, minChange: 0 } });
-        this.log('Distance reporting removed from the sensor');
-      } catch (err) {
-        if (isTimeout(err)) throw err;
-        this.log('Removing distance reporting gave', err.message);
-      }
-      // Standard temperature, humidity and light reports are no longer used (0.5.27), so nothing to restore.
-      await this.setStoreValue('freedReporting', []);
-      this._pushJob = null;
-      notify(this, 'fp300.push_off');
-    }
-  }
 
-  /** Diagnosis: which automatic reports the sensor has, as far as it tells us. */
-  async _logReportingTable(std) {
-    const show = r => (r.status === 'SUCCESS' ? `min ${r.minInterval} s, max ${r.maxInterval} s, change ${r.minChange}` : r.status);
-    try {
-      const lumi = await this.lumi.readReportingConfiguration(['presence', 'pirDetection', 'targetDistance']);
-      lumi.forEach(r => this.log(`Report table 0xFCC0 0x${r.attributeId.toString(16)}: ${show(r)}`));
-    } catch (err) {
-      this.log('Reading the report table (0xFCC0) failed:', err.message);
-    }
-    for (const [name, { cluster }] of Object.entries(std)) {
-      if (!cluster) continue;
-      try {
-        const [r] = await cluster.readReportingConfiguration(['measuredValue']);
-        this.log(`Report table ${name}: ${r ? show(r) : 'no answer'}`);
-      } catch (err) {
-        this.log(`Reading the report table (${name}) failed:`, err.message);
-      }
-    }
-  }
 
-  /**
-   * PIR flow cards. "on" fires when the PIR starts seeing movement; a repeat within 5 s (the sensor
-   * sometimes sends the same report twice) is ignored. "off" fires when it stops.
-   */
-  _pirFlow(moving) {
-    const now = Date.now();
-    const trig = this.driver && moving ? this.driver.pirOnTrigger : this.driver && this.driver.pirOffTrigger;
-    if (!trig) return;
-    if (moving) {
-      if (this._pirFlowOn && now - (this._pirFlowAt || 0) < 5000) return;
-      this._pirFlowOn = true;
-      this._pirFlowAt = now;
-    } else {
-      if (!this._pirFlowOn) return;
-      this._pirFlowOn = false;
-    }
-    trig.trigger(this, {}, {}).catch(this.error);
-  }
 
-  /** For the condition card: does the PIR see movement right now (with the same 2 minute limit)? */
-  pirActive() {
-    return Boolean(this._pirActive && Date.now() - (this._pirAt || 0) <= PIR_HOLD_MS);
-  }
-
-  /**
-   * The user's rule: when the sensor reports "off", first read the sensor again to check that mmWave
-   * and PIR really are off; only then switch the motion alarm off and end the session. The off report
-   * itself is a wake moment, so the sensor answers right away. If someone turns out to be there after
-   * all, the answer is handled like a report and everything stays on. If the sensor does not answer,
-   * the reports it sent are trusted.
-   */
-  _requestAbsenceCheck(reason) {
-    if (this._absenceCheck) return;
-    // Nothing to confirm: the alarm is already off and no session runs (the sensor repeats its
-    // "off" state now and then, log of 15 October 13:37:43). No extra traffic to the sensor then.
-    if (this.getCapabilityValue('alarm_motion') !== true && !this._session) return;
-    this._absenceCheck = (async () => {
-      if (this.lumi) {
-        try {
-          await this.lumi.readAttributes(['presence', 'pirDetection'], { timeout: ABSENCE_CHECK_TIMEOUT_MS });
-          this.log(`Checked the sensor after "${reason}": mmWave ${this._mmwavePresence() ? 'on' : 'off'}, PIR ${this._pirActive ? 'on' : 'off'}`);
-        } catch (err) {
-          this.log(`Check after "${reason}" not answered, using the reports:`, err.message);
-        }
-      }
-      await this._updateMotionAlarm(reason, true);
-      this._checkSessionEnd(reason);
-    })().catch(this.error).finally(() => { this._absenceCheck = null; });
-  }
-
-  /** Both mmWave presence and PIR are off: the session ends. */
-  _checkSessionEnd(reason) {
-    if (!this._session) return;
-    const mmwave = this._mmwavePresence() === true;
-    const pir = this._pirActive && Date.now() - (this._pirAt || 0) <= PIR_HOLD_MS;
-    if (mmwave || pir) return;
-    this._session = false;
-    this._pending.delete('trackDistance');
-    this._stopDistancePolling();
-    this._stopRepeatStarts();
-    this.log(`Session ended (${reason}): nobody present and PIR off, no more restarts`);
-  }
 
   /**
    * Distance measurement is only used for zones, for the live strip while configuring, or when the user
@@ -795,46 +489,18 @@ class FP300Device extends ZigBeeDevice {
     return Object.keys(this.getZones()).length > 0;
   }
 
-  _sendTrackStart(message) {
-    if (!this._distanceWanted()) return;
-    if (Date.now() - (this._entryStartAt || 0) < START_DEBOUNCE_MS) return; // same wake moment, already sent
-    this._entryStartAt = Date.now();
-    this._pending.set('trackDistance', 1);
-    this.log(message);
-  }
 
   /** The 1-second zone clock (absence timeouts) is only needed while there are zones. */
   _syncZoneTimer() {
     const needed = Object.keys(this.getZones()).length > 0;
     if (needed && !this._zoneTimer) {
-      this._zoneTimer = this.homey.setInterval(() => {
-        if (this._pirActive && Date.now() - this._pirAt > PIR_HOLD_MS) { // PIR detection got too old
-          this._checkSessionEnd('PIR expired');
-          this._updateZones();
-        }
-        else this._publishZones([]);
-      }, 1000);
+      this._zoneTimer = this.homey.setInterval(() => this._publishZones([]), 1000); // "empty after" per zone
     } else if (!needed && this._zoneTimer) {
       this.homey.clearInterval(this._zoneTimer);
       this._zoneTimer = null;
     }
   }
 
-  _maybeRestartTracking() {
-    if (!this._distanceWanted()) return;
-    if (!this._distanceWanted()) return;
-    // precaution: leave the radar alone while it learns the empty room (or is about to)
-    if (this._learningBusy()) return;
-    const now = Date.now();
-    const interval = TRACK_RESTART_MS;
-    // Someone is here but no distance came in for a while: the measurement probably stopped
-    // early, restart it now instead of waiting for the regular interval.
-    const stale = this._session === true
-      && now - this._lastDistanceAt > STALE_DISTANCE_MS && now - this._lastTrackStart > STALE_DISTANCE_MS;
-    if (now - this._lastTrackStart < interval && !stale) return;
-    if (stale && !this._pending.has('trackDistance')) this.log('Present without a recent distance: restarting the measurement');
-    this._pending.set('trackDistance', 1);
-  }
 
   /** Flow action: start now, or as soon as the sensor wakes up. */
   async startTracking() {
@@ -851,10 +517,9 @@ class FP300Device extends ZigBeeDevice {
     // Firmware 0.0.0_6542 no longer pushes 0x00F7 by itself (Zigbee2MQTT issue #32153), so without
     // this read the battery would never update. Same rule as fp300BatteryPoll in Zigbee2MQTT.
     if (Date.now() - (this._lastStructAt || 0) > STRUCT_MAX_AGE_MS) this._pendingStructRead = true;
-    if (this._session) this._maybeRestartTracking();
     const oneShots = awake && this._oneShots.size > 0;
     const hk = this._housekeepingAllowed();
-    const pushJob = awake && hk && (Boolean(this._pushJob) || this._pendingReportingRefresh);
+    const pushJob = awake && hk && this._pendingReportingRefresh;
     const reads = hk && (this._pendingStructRead || this._pendingConfigRead);
     if (!this._pending.size && !reads && !oneShots && !pushJob) return;
     this.homey.setTimeout(() => this._flush(awake).catch(this.error), 50);
@@ -863,19 +528,17 @@ class FP300Device extends ZigBeeDevice {
   /**
    * Housekeeping (reading the configuration, firmware, battery status, refreshing the reporting) is
    * not urgent. While someone is present the sensor is busy measuring and sending distances, so it
-   * waits until the sensor reports nobody (that message is itself a wake moment). If someone stays
-   * present for a very long time, it runs anyway after 30 minutes. Settings the user changed and
-   * maintenance actions are never held back.
+   * waits until the sensor reports nobody (that message is itself a wake moment). Settings the user
+   * changed and maintenance actions are never held back.
    */
   _housekeepingAllowed() {
-    const due = this._pendingConfigRead || this._pendingStructRead || this._pendingReportingRefresh || this._pushJob;
-    if (!this._session) { this._housekeepingSince = null; return true; }
-    if (!due) return false;
-    if (!this._housekeepingSince) {
-      this._housekeepingSince = Date.now();
+    if (!this._session) { this._housekeepingWaitLogged = false; return true; }
+    const due = this._pendingConfigRead || this._pendingStructRead || this._pendingReportingRefresh;
+    if (due && !this._housekeepingWaitLogged) {
+      this._housekeepingWaitLogged = true;
       this.log('Status and configuration reads wait until nobody is present');
     }
-    return Date.now() - this._housekeepingSince > HOUSEKEEPING_MAX_DEFER_MS;
+    return false;
   }
 
   /** Is a periodic task due: never done, or longer ago than `every` (time kept in the device store)? */
@@ -931,8 +594,6 @@ class FP300Device extends ZigBeeDevice {
       }
       if (awake) await this._runOneShots();
       if (awake && this._housekeepingAllowed()) await this._refreshReporting();
-      if (awake && this._housekeepingAllowed()) await this._runDistancePushJob();
-      this._proactiveFailAt = 0;
       return true;
     } catch (err) {
       this.log('Sensor not reachable now, retrying on next wake up:', err.message);
@@ -1171,7 +832,7 @@ class FP300Device extends ZigBeeDevice {
 
   async onSettings({ newSettings, changedKeys }) {
     if (changedKeys.includes('motion_source')) {
-      this.homey.setTimeout(() => this._updateMotionAlarm('setting').catch(this.error), 500);
+      await this._applyMotionAlarm('setting', true, newSettings.motion_source);
     }
     if (changedKeys.includes('range_min') || changedKeys.includes('range_max')) {
       if (!(newSettings.range_max > newSettings.range_min)) throw new Error(this.homey.__('errors.range'));
@@ -1196,10 +857,6 @@ class FP300Device extends ZigBeeDevice {
       // Homey stores newSettings after onSettings; show "custom" right after that
       this.homey.setTimeout(() => this.setSettings({ [group.sampling]: '4' }).catch(this.error), 1000);
       this.log(`Sampling ${group.sampling} switched to custom, so the new interval or threshold takes effect`);
-    }
-    if (changedKeys.includes('distance_push')) {
-      this._pushJob = newSettings.distance_push ? 'enable' : 'disable';
-      this._announceApplied = true;
     }
     if (changedKeys.includes('distance_mode')) this._lastTrackStart = 0;
 
@@ -1256,7 +913,7 @@ class FP300Device extends ZigBeeDevice {
 
   /** Warning on the device tile while something waits for the sensor; removed once it arrived. */
   _updateWaitingWarning() {
-    const waiting = [...this._pending.keys()].some(k => k !== 'trackDistance') || this._oneShots.size > 0 || Boolean(this._pushJob);
+    const waiting = [...this._pending.keys()].some(k => k !== 'trackDistance') || this._oneShots.size > 0;
     if (this._learningUntil) {
       this.setWarning(this.homey.__('learning.busy', { until: this._time(this._learningUntil) })).catch(this.error);
       this._warning = true;
@@ -1618,6 +1275,7 @@ class FP300Device extends ZigBeeDevice {
       distance,
       block: this._zonePresence() ? blockOf(distance) : null,
       distanceAge: this._lastDistanceAt ? Math.round((Date.now() - this._lastDistanceAt) / 1000) : null,
+      pir: this._pir,
       // waiting: start of the measurement is queued until the sensor wakes up; running: started in the last 30 min
       tracking: this._pending.has('trackDistance') ? 'waiting'
         : (Date.now() - this._lastTrackStart < 30 * 60 * 1000 ? 'running' : 'idle'),
@@ -1631,26 +1289,18 @@ class FP300Device extends ZigBeeDevice {
   }
 
   onDeleted() {
-    if (this._motionTitleTimer) this.homey.clearTimeout(this._motionTitleTimer);
     if (this._learningIdleTimer) this.homey.clearTimeout(this._learningIdleTimer);
-    if (this._repeatTimer) this.homey.clearInterval(this._repeatTimer);
-    if (this._pollTimer) this.homey.clearInterval(this._pollTimer);
     if (this._progressTimer) this.homey.clearInterval(this._progressTimer);
     if (this._learningTimer) this.homey.clearTimeout(this._learningTimer);
     if (this._zoneTimer) this.homey.clearInterval(this._zoneTimer);
-    if (this._trackTimer) this.homey.clearInterval(this._trackTimer);
     super.onDeleted();
   }
 
   async onUninit() {
-    if (this._motionTitleTimer) this.homey.clearTimeout(this._motionTitleTimer);
     if (this._learningIdleTimer) this.homey.clearTimeout(this._learningIdleTimer);
-    if (this._repeatTimer) this.homey.clearInterval(this._repeatTimer);
-    if (this._pollTimer) this.homey.clearInterval(this._pollTimer);
     if (this._progressTimer) this.homey.clearInterval(this._progressTimer);
     if (this._learningTimer) this.homey.clearTimeout(this._learningTimer);
     if (this._zoneTimer) this.homey.clearInterval(this._zoneTimer);
-    if (this._trackTimer) this.homey.clearInterval(this._trackTimer);
   }
 
 }
