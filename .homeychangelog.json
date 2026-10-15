@@ -330,5 +330,9 @@
   "0.6.30": {
     "en": "FP300: the same presence or PIR report sent two or three times within a second is handled and logged only once.",
     "nl": "FP300: dezelfde aanwezigheids- of PIR melding die twee of drie keer binnen een seconde komt, wordt maar één keer verwerkt en gelogd."
+  },
+  "0.6.31": {
+    "en": "FP300: the distance is only asked from the sensor while the radar itself sees someone; with only the PIR on, the sensor answers an old value.",
+    "nl": "FP300: de afstand wordt alleen opgevraagd als de radar zelf iemand ziet; met alleen de PIR aan geeft de sensor een oude waarde."
   }
 }

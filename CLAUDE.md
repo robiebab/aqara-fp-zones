@@ -2,7 +2,7 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.6.30**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.6.31**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
@@ -292,6 +292,10 @@ Op verzoek van de gebruiker (log 15 oktober): uitlezen van configuratie, firmwar
 ## 8k. Dubbele meldingen (0.6.30)
 
 De FP300 stuurt dezelfde aanwezigheids- of PIR melding soms 2 tot 3 keer binnen een seconde (log 15 oktober; waarschijnlijk herhalingen op Zigbee niveau, niet bevestigd). `_dropDuplicates` laat een melding met dezelfde waarde binnen 2 s (`DUPLICATE_MS`) vallen voordat hij verwerkt of gelogd wordt. Een "PIR on" later terwijl de PIR nog aan is (de herhaling na 20 tot 60 s) valt daar niet onder en blijft "repeated state".
+
+## 8l. Afstand opvragen alleen met radar (0.6.31)
+
+Log 15 oktober 13:21: na "niemand" zag alleen de PIR nog iets (de PIR kijkt verder dan de radar; de keuken zag op hetzelfde moment ook PIR). De app vroeg twee keer de afstand op en kreeg de oude 0,87 m, terwijl de radar niemand zag. `_askDistanceIfSilent` vraagt nu alleen op als `_mmwavePresence()` true is. Zelf gestuurde afstanden blijven altijd welkom.
 
 ## 9. Open punten en onzekerheden
 

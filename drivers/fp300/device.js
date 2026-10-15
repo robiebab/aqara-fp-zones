@@ -460,6 +460,9 @@ class FP300Device extends ZigBeeDevice {
   _askDistanceIfSilent() {
     const now = Date.now();
     if (!this._session || this._learningBusy() || !this.lumi || !this._distanceWanted()) return;
+    // Only when the radar itself sees someone. With only the PIR on, the sensor answers its last stored
+    // distance (log of 15 October: 0.87 m twice while the radar saw nobody), which could switch a zone on.
+    if (this._mmwavePresence() !== true) return;
     if (now - this._lastDistanceAt < DISTANCE_SILENT_MS || now - (this._distanceAskAt || 0) < DISTANCE_SILENT_MS) return;
     this._distanceAskAt = now;
     this.lumi.readAttributes(['targetDistance'])
