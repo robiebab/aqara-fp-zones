@@ -6,7 +6,7 @@ const { AqaraLumiCluster } = require('../../lib/AqaraClusters');
 const {
   hookEndpoint, ensureCluster, parseAttributeRecords, parseLumiStruct,
 } = require('../../lib/zclRaw');
-const { ensureCapabilities, notify } = require('../../lib/deviceUtil');
+const { ensureCapabilities, notify, scheduleZoneDeadline } = require('../../lib/deviceUtil');
 const { parseBlockZone, blockOf, BlockTracker } = require('../../lib/fp300Zones');
 const {
   PLAIN: SENSOR_SETTINGS, rangeBuffer, blocksFromTo, fromToOf, settingsFromAttributes, sameValue,
@@ -17,9 +17,6 @@ const { buildTimeReadResponse } = require('../../lib/zigbeeTime');
 
 const newUid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const VIEWER_TRACK_EVERY_MS = 5 * 60 * 1000;
-const CONFIG_READ_EVERY_MS = 24 * 60 * 60 * 1000;        // configuration read at most once a day
-const REPORTING_REFRESH_EVERY_MS = 24 * 60 * 60 * 1000;  // reporting refresh at most once a day
-const FIRMWARE_READ_EVERY_MS = 7 * 24 * 60 * 60 * 1000;  // firmware version at most once a week
 // The FP300 ends a distance measurement by itself after a while (20 to 30 minutes in user reports),
 // without telling. That is the one rule here that cannot follow a sensor state: while the measurement
 // is wanted, it is started again at the next message from the sensor once the last start is older
@@ -79,14 +76,15 @@ class FP300Device extends ZigBeeDevice {
     this.tracker = new BlockTracker(this.getZones());
     this.tracker.update(this._zonePresence(), this.getCapabilityValue('target_distance'), Date.now());
     // absence timeouts of zones run on Homey's clock, not on sensor reports
-    this._syncZoneTimer(); // only runs while this sensor has zones
+    // zone "empty after" times: one timer for the next moment a zone changes (see scheduleZoneDeadline)
     // What the sensor last reported: null until the first report or read after this start.
     this._mmwave = null;
     this._pir = null;
     this._session = false;
-    // Read the real configuration (and firmware) only when it was not done in the last 24 hours:
-    // the settings do not change by themselves, and every read costs the sensor battery.
-    this._pendingConfigRead = this._due('configReadAt', CONFIG_READ_EVERY_MS);
+    // Read the configuration (and firmware) only when there is a reason: never read yet, or a new app
+    // version. The settings in the sensor do not change by themselves. A rejoin or "restore defaults"
+    // asks for it too (onEndDeviceAnnounce, _resetDefaults).
+    this._pendingConfigRead = this._newSinceLast('configReadVersion');
     // the yes/no setting "motion alarm also on PIR" became the choice motion_source
     if (this.getSetting('motion_includes_pir') === true && !this.getStoreValue('motionSourceMigrated')) {
       await this.setSettings({ motion_source: 'both' }).catch(this.error);
@@ -133,9 +131,9 @@ class FP300Device extends ZigBeeDevice {
     // ZCL: MeasuredValue = 10000 x log10(lux) + 1 (same conversion as homey-zigbeedriver)
     this._listenMeasurement('measure_luminance', CLUSTER.ILLUMINANCE_MEASUREMENT.NAME,
       raw => (typeof raw === 'number' ? Math.round(10 ** ((raw - 1) / 10000)) : null));
-    // Refresh presence/PIR reporting (and remove the standard reports of old versions) at most once
-    // a day, and always after the sensor rejoined the network (onEndDeviceAnnounce).
-    this._pendingReportingRefresh = this._due('reportingRefreshedAt', REPORTING_REFRESH_EVERY_MS);
+    // Set up presence/PIR reporting (and remove the standard reports of old versions) when never done,
+    // with a new app version, and after the sensor rejoined the network (onEndDeviceAnnounce).
+    this._pendingReportingRefresh = this._newSinceLast('reportingVersion');
 
     if (this.isFirstInit()) {
       // Right after pairing the sensor is awake: configure and read the current configuration.
@@ -151,7 +149,6 @@ class FP300Device extends ZigBeeDevice {
 
   async _onFrame(clusterId, frame, header) {
     this._noteWake();
-    if (!this._learningUntil) this._probeLearningLater();
     // The sensor asks Homey for the time about every 1.5 minutes; answer it like Zigbee2MQTT does.
     if (clusterId === 0x000a) {
       const response = buildTimeReadResponse(frame, header, this.homey.clock.getTimezone());
@@ -164,7 +161,6 @@ class FP300Device extends ZigBeeDevice {
           this._onLearningMessage();
           this._learningNoteMessage('time');
         }
-        this._checkLearning();
         return true;
       }
     }
@@ -173,7 +169,6 @@ class FP300Device extends ZigBeeDevice {
     if (this._learningUntil) {
       this.log('Learning trace', `cluster 0x${clusterId.toString(16)}`, `cmd 0x${header.cmdId.toString(16)}`, frame.toString('hex'));
       this._learningNoteMessage(this._messageKind(clusterId, frame, header));
-      this._checkLearning();
     }
     if (clusterId === AqaraLumiCluster.ID && !header.clusterSpecific && [0x01, 0x0a].includes(header.cmdId)) {
       const attrs = parseAttributeRecords(frame, header);
@@ -460,7 +455,7 @@ class FP300Device extends ZigBeeDevice {
       await this.setStoreValue('freedReporting', []);
     }
     this._pendingReportingRefresh = false;
-    this.setStoreValue('reportingRefreshedAt', Date.now()).catch(this.error);
+    this.setStoreValue('reportingVersion', this.homey.manifest.version).catch(this.error);
   }
 
 
@@ -495,18 +490,6 @@ class FP300Device extends ZigBeeDevice {
   }
 
 
-  /** The 1-second zone clock (absence timeouts) is only needed while there are zones. */
-  _syncZoneTimer() {
-    const needed = Object.keys(this.getZones()).length > 0;
-    if (needed && !this._zoneTimer) {
-      this._zoneTimer = this.homey.setInterval(() => this._publishZones([]), 1000); // "empty after" per zone
-    } else if (!needed && this._zoneTimer) {
-      this.homey.clearInterval(this._zoneTimer);
-      this._zoneTimer = null;
-    }
-  }
-
-
   /** Flow action: start now, or as soon as the sensor wakes up. */
   async startTracking() {
     this._pending.set('trackDistance', 1);
@@ -527,7 +510,7 @@ class FP300Device extends ZigBeeDevice {
     const pushJob = awake && hk && this._pendingReportingRefresh;
     const reads = hk && (this._pendingStructRead || this._pendingConfigRead);
     if (!this._pending.size && !reads && !oneShots && !pushJob) return;
-    this.homey.setTimeout(() => this._flush(awake).catch(this.error), 50);
+    Promise.resolve().then(() => this._flush(awake)).catch(this.error);
   }
 
   /**
@@ -546,9 +529,9 @@ class FP300Device extends ZigBeeDevice {
     return false;
   }
 
-  /** Is a periodic task due: never done, or longer ago than `every` (time kept in the device store)? */
-  _due(key, every) {
-    return Date.now() - (this.getStoreValue(key) || 0) > every;
+  /** Never done, or done by an older app version (version kept in the device store)? */
+  _newSinceLast(key) {
+    return this.getStoreValue(key) !== this.homey.manifest.version;
   }
 
   /** Sends pending writes one at a time (advised for sleepy end devices). */
@@ -583,13 +566,13 @@ class FP300Device extends ZigBeeDevice {
       if (this._housekeepingAllowed() && this._pendingConfigRead) {
         await this.lumi.readAttributes(['presence', 'pirDetection']).catch(err => this.log('Reading presence failed', err.message));
         if (this._housekeepingAllowed()) {
-          if (this._due('firmwareReadAt', FIRMWARE_READ_EVERY_MS) || this.getSetting('firmware_info') === '-') {
+          if (this._readFirmwareNext || !this.getSetting('firmware_info') || this.getSetting('firmware_info') === '-') {
             await this._readFirmware();
-            this.setStoreValue('firmwareReadAt', Date.now()).catch(this.error);
+            this._readFirmwareNext = false;
           }
           await this._readConfiguration();
           this._pendingConfigRead = false;
-          this.setStoreValue('configReadAt', Date.now()).catch(this.error);
+          this.setStoreValue('configReadVersion', this.homey.manifest.version).catch(this.error);
           this.log('Configuration read from the sensor');
         }
       }
@@ -609,7 +592,7 @@ class FP300Device extends ZigBeeDevice {
       if (this._flushAgain !== undefined && this._flushAgain !== null) {
         const again = this._flushAgain;
         this._flushAgain = null;
-        if (this._pending.size || (again && this._oneShots.size)) this.homey.setTimeout(() => this._flush(again).catch(this.error), 0);
+        if (this._pending.size || (again && this._oneShots.size)) Promise.resolve().then(() => this._flush(again)).catch(this.error);
       }
     }
   }
@@ -742,7 +725,7 @@ class FP300Device extends ZigBeeDevice {
     this.log('Sensor announced itself on the network: refreshing reporting and reading its state');
     this._pendingReportingRefresh = true;
     this._pendingConfigRead = true;
-    this.setStoreValue('firmwareReadAt', 0).catch(this.error); // a rejoin can follow a firmware update
+    this._readFirmwareNext = true; // a rejoin can follow a firmware update
     this._pendingStructRead = true;
     this._scheduleFlush(true);
   }
@@ -837,8 +820,7 @@ class FP300Device extends ZigBeeDevice {
     this._announceApplied = true;
     await this.setStoreValue('rangeBlocks', blocks);
     await this.setSettings(fromToOf(blocks)).catch(this.error);
-    this.homey.setTimeout(() => this._updateWaitingWarning(), 1500);
-    this._flush().catch(this.error);
+    this._flush().then(() => this._updateWaitingWarning()).catch(this.error);
     return { blocks, message: this.homey.__('settings.saved_eta', { eta: this.wakeText() }) };
   }
 
@@ -881,9 +863,10 @@ class FP300Device extends ZigBeeDevice {
     }
     if (changedKeys.includes('distance_mode')) this._lastTrackStart = 0;
 
-    this.homey.setTimeout(() => this._flush().catch(this.error), 0);
     this._announceApplied = true;
-    this.homey.setTimeout(() => this._updateWaitingWarning(), 1500);
+    // try to send right away (after Homey stored the settings); the warning follows the outcome:
+    // sent -> no warning, sensor asleep -> "will be sent when the sensor wakes up"
+    Promise.resolve().then(() => this._flush()).then(() => this._updateWaitingWarning()).catch(this.error);
     return this.homey.__('settings.saved_eta', { eta: this.wakeText() });
   }
 
@@ -959,23 +942,6 @@ class FP300Device extends ZigBeeDevice {
     this.log(`Status ${name} during learning:`, tags);
   }
 
-  /**
-   * Experiment: does 0x0157 ever go back to 0? Read it again 30 minutes after the start,
-   * the first time the sensor is awake after that moment.
-   */
-  _probeLearningLater() {
-    const due = this.getStoreValue('learnProbeAt');
-    if (!due || Date.now() < due || this._learnProbeBusy) return;
-    this._learnProbeBusy = true;
-    this.lumi.readAttributes(['spatialLearning'])
-      .then(v => {
-        const minutes = Math.round((Date.now() - (due - 30 * 60 * 1000)) / 60000);
-        this.log(`Spatial learning state ${minutes} min after the start: ${v.spatialLearning}`);
-        return this.setStoreValue('learnProbeAt', null);
-      })
-      .catch(err => this.log('Learning probe failed, trying again next time', err.message))
-      .finally(() => { this._learnProbeBusy = false; });
-  }
 
   /**
    * What a message from the sensor is, in plain words (decoded from the user's logs):
@@ -1040,7 +1006,6 @@ class FP300Device extends ZigBeeDevice {
     this._learningMinutesShown = 0;
     this._learningLastAt = start;
     this.setStoreValue('learningStart', start).catch(this.error);
-    this.setStoreValue('learnProbeAt', start + 30 * 60 * 1000).catch(this.error);
     this.setStoreValue('learningCount', 0).catch(this.error);
     this._startProgress();
     this._learningMovement = false;
@@ -1068,7 +1033,11 @@ class FP300Device extends ZigBeeDevice {
     });
     // keep the result visible for 10 minutes, then back to the neutral text
     if (this._learningIdleTimer) this.homey.clearTimeout(this._learningIdleTimer);
-    this._learningIdleTimer = this.homey.setTimeout(() => { if (!this._learningUntil) this._setLearningIdle(); }, LEARNING_RESULT_MS);
+    this._learningIdleTimer = this.homey.setTimeout(() => {
+      if (this._learningUntil) return;
+      this._setLearningIdle();
+      if (this.hasCapability('learning_progress')) this.removeCapability('learning_progress').catch(this.error);
+    }, LEARNING_RESULT_MS);
     this.driver.learningDoneTrigger.trigger(this, { success: !movement }).catch(this.error);
   }
 
@@ -1107,8 +1076,6 @@ class FP300Device extends ZigBeeDevice {
         const left = Math.max(1, Math.ceil((this._learningUntil - Date.now()) / 60000));
         this._showLearningLive();
         this.log(`Learning: ${pct} %, ${left} min left, sensor state ${this._learningState === undefined ? 'not read yet' : this._learningState}`);
-        // also try to read the state now and then; works when the sensor happens to be listening
-        this._checkLearning(2 * 60 * 1000);
       }
     };
     const add = this.hasCapability('learning_progress') ? Promise.resolve() : this.addCapability('learning_progress');
@@ -1173,10 +1140,8 @@ class FP300Device extends ZigBeeDevice {
     if (this._progressTimer) this.homey.clearInterval(this._progressTimer);
     this._progressTimer = null;
     if (!this.hasCapability('learning_progress')) return;
-    this.setCapabilityValue('learning_progress', 100)
-      .then(() => new Promise(resolve => this.homey.setTimeout(resolve, 60 * 1000)))
-      .then(() => (this._learningUntil ? null : this.removeCapability('learning_progress')))
-      .catch(this.error);
+    // 100 % stays visible as long as the result is shown in the settings; both go at the same moment
+    this.setCapabilityValue('learning_progress', 100).catch(this.error);
   }
 
   /**
@@ -1193,14 +1158,6 @@ class FP300Device extends ZigBeeDevice {
     else if (value === 0 && this._learningSeenActive) this._finishLearningWindow(true);
   }
 
-  /** While learning, ask the sensor for its learning state when it is awake (at most once a minute). */
-  _checkLearning(every = 60 * 1000) {
-    if (!this._learningUntil || Date.now() - (this._learningCheckAt || 0) < every) return;
-    this._learningCheckAt = Date.now();
-    // the answer is handled in _onFrame (read responses of 0xFCC0 pass through _handleLumiAttributes)
-    this.lumi.readAttributes(['spatialLearning'])
-      .catch(err => this.log('Reading learning state failed', err.message));
-  }
 
   _movementWhileLearning() {
     if (!this._learningUntil || this._learningMovement) return;
@@ -1242,7 +1199,7 @@ class FP300Device extends ZigBeeDevice {
     await this.setStoreValue('zones', zones);
     this._lastEmitted = '';
     this._publishZones(this.tracker.setZones(zones));
-    this._syncZoneTimer();
+    scheduleZoneDeadline(this);
     return zones;
   }
 
@@ -1258,6 +1215,7 @@ class FP300Device extends ZigBeeDevice {
   _publishZones(events) {
     if (!this.tracker) return;
     const states = this.zoneStates();
+    scheduleZoneDeadline(this); // the next moment a zone's own "empty after" time ends
     const encoded = JSON.stringify(states);
     if (encoded === this._lastEmitted && !events.length) return;
     this._lastEmitted = encoded;
@@ -1314,7 +1272,7 @@ class FP300Device extends ZigBeeDevice {
     if (this._learningIdleTimer) this.homey.clearTimeout(this._learningIdleTimer);
     if (this._progressTimer) this.homey.clearInterval(this._progressTimer);
     if (this._learningTimer) this.homey.clearTimeout(this._learningTimer);
-    if (this._zoneTimer) this.homey.clearInterval(this._zoneTimer);
+    if (this._zoneDeadlineTimer) this.homey.clearTimeout(this._zoneDeadlineTimer);
     super.onDeleted();
   }
 
@@ -1322,7 +1280,7 @@ class FP300Device extends ZigBeeDevice {
     if (this._learningIdleTimer) this.homey.clearTimeout(this._learningIdleTimer);
     if (this._progressTimer) this.homey.clearInterval(this._progressTimer);
     if (this._learningTimer) this.homey.clearTimeout(this._learningTimer);
-    if (this._zoneTimer) this.homey.clearInterval(this._zoneTimer);
+    if (this._zoneDeadlineTimer) this.homey.clearTimeout(this._zoneDeadlineTimer);
   }
 
 }

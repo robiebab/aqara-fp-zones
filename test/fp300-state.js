@@ -40,7 +40,7 @@ Date.now = () => clock;
 /** A device with a fake radio: `answer(names)` returns what the sensor answers to a read. */
 function device(settings, answer = () => ({})) {
   const d = new FP300(settings);
-  d.homey = { __: k => k, app: { bus: new EventEmitter() }, setTimeout: f => { setImmediate(f); return 1; }, clearTimeout() {},
+  d.homey = { __: k => k, manifest: { version: 'test' }, app: { bus: new EventEmitter() }, setTimeout: f => { setImmediate(f); return 1; }, clearTimeout() {},
     setInterval: () => 1, clearInterval() {}, notifications: { createNotification: async () => {} }, clock: { getTimezone: () => 'Europe/Amsterdam' } };
   d.driver = { pirOnTrigger: { trigger: async () => d.cards.push('PIR on') }, pirOffTrigger: { trigger: async () => d.cards.push('PIR off') },
     triggers: Object.fromEntries(['distance_below', 'distance_above', 'entered_range', 'left_range'].map(k => [k, { trigger: async () => {} }])) };
@@ -154,6 +154,15 @@ async function test(name, fn) { await fn(); passed++; console.log(`ok   ${name}`
     await d._handleLumiAttributes({ 0x00f7: f7 });
     await d._handleLumiAttributes({ 0x00f7: f7 });                    // same battery again
     assert.deepStrictEqual(d.logs.filter(l => /Status|Battery/.test(l)), ['Battery: 100 % (2969 mV)']);
+  });
+
+  await test('configuration is only read when there is a reason (never read, or a new app version)', async () => {
+    const d = device({}, () => ({}));
+    assert.strictEqual(d._newSinceLast('configReadVersion'), true, 'never read');
+    d._store.configReadVersion = 'test';
+    assert.strictEqual(d._newSinceLast('configReadVersion'), false, 'read by this version: not again, also not after a restart');
+    d._store.configReadVersion = 'older';
+    assert.strictEqual(d._newSinceLast('configReadVersion'), true, 'new app version');
   });
 
   Date.now = realNow;

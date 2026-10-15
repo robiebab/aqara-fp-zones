@@ -141,4 +141,20 @@ test('Drivers: settings screens match the sensor tables (ranges, steps, choices)
   assert.deepStrictEqual(fp400.find(x => x.id === 'sensitivity').values.map(v => v.id), ['0', '1', '2']);
 });
 
+test('Zones: the next moment a zone changes by itself (one timer instead of a clock every second)', () => {
+  const t = new fp300z.BlockTracker({ 1: fp300z.parseBlockZone({ name: 'K', blocks: [6, 7], absence_timeout: 30 }) });
+  t.update(true, 1.8, 0);
+  assert.strictEqual(t.nextDeadline(), null, 'inside the zone: nothing counting down');
+  t.update(true, 4.0, 10000);                       // walked out of the zone, still in the room
+  assert.strictEqual(t.nextDeadline(), 40000, 'empty after 30 s: exactly at 40 s');
+  assert.strictEqual(t.state(39999)[1].occupied, true);
+  assert.strictEqual(t.state(40000)[1].occupied, false);
+  const z = { 1: trk.parseZone({ name: 'L', cells: [16 * 5 + 3], absence_timeout: 20 }) };
+  const f = new trk.ZoneTracker(z);
+  f.accept([{ id: 1, x: -400 + 3 * 50 + 10, y: 5 * 50 + 10 }], 1, 1000);
+  assert.strictEqual(f.nextDeadline(1000), 31000, 'FP400: positions go stale 30 s after the last frame');
+  f.accept([], 0, 2000);                            // the person left the zone
+  assert.strictEqual(f.nextDeadline(2000), 22000, 'FP400: the zone empties after its own 20 s');
+});
+
 console.log(`\n${passed} tests passed${process.exitCode ? ', some FAILED' : ''}`);

@@ -6,7 +6,7 @@ const {
   AqaraFp400LocationCluster, AqaraFp400RadarCluster, AqaraFp400SensitivityCluster, AqaraFp400ConfigCluster,
 } = require('../../lib/AqaraClusters');
 const { hookEndpoint, ensureCluster } = require('../../lib/zclRaw');
-const { ensureCapabilities, notify } = require('../../lib/deviceUtil');
+const { ensureCapabilities, notify, scheduleZoneDeadline } = require('../../lib/deviceUtil');
 const { AREAS, cellsToMask, maskToCells, parseCells } = require('../../lib/fp400Areas');
 const { cellOf } = require('../../lib/fp400Tracking');
 const { appDefaults, isZclStatus } = require('../../lib/resetDefaults');
@@ -64,7 +64,10 @@ class FP400Device extends ZigBeeDevice {
     // Room presence (endpoint 1). occupancy is a bitmap, bit "occupied".
     const occupancy = ep1.clusters[CLUSTER.OCCUPANCY_SENSING.NAME];
     if (occupancy) {
-      occupancy.on('attr.occupancy', value => this._onPresence(Boolean(value && value.occupied)));
+      occupancy.on('attr.occupancy', value => {
+        if (this._rereadOnNextMessage) this._readAfterReset().catch(this.error);
+        this._onPresence(Boolean(value && value.occupied));
+      });
     }
 
     // Illuminance lives on endpoint 2 and is not reported, so it is polled.
@@ -78,10 +81,16 @@ class FP400Device extends ZigBeeDevice {
       ]).catch(err => this.error('Configure reporting failed', err.message));
     }
 
-    // Timers start a bit later: no Zigbee traffic during init (Homey best practice).
-    this.homey.setTimeout(() => this._startTimers(), 5000);
-    this.homey.setTimeout(() => this._readAiSettings(), 8000);
-    this.homey.setTimeout(() => this.readAreas().catch(err => this.error('Reading areas failed', err.message)), 11000);
+    // After init: read what the sensor has, one step after the other (each waits for the answer of
+    // the previous one, so there is no burst of traffic), then start the regular work.
+    Promise.resolve().then(() => this._startup()).catch(err => this.error('Startup failed', err.message));
+  }
+
+  async _startup() {
+    await this._readPresence();
+    await this._readAiSettings();
+    await this.readAreas().catch(err => this.error('Reading areas failed', err.message));
+    this._startTimers();
   }
 
   /* ------------------------------------------------------------ the sensor's own areas (ghost handling) */
@@ -193,10 +202,17 @@ class FP400Device extends ZigBeeDevice {
       notify(this, 'reset.unsupported_fp400');
       return;
     }
-    await new Promise(resolve => this.homey.setTimeout(resolve, 3000));
+    // Read the settings now, and once more at the next message from the sensor (event, no fixed wait):
+    // how long the reset takes inside the sensor is not documented.
+    await this._readAfterReset();
+    this._rereadOnNextMessage = true;
+    notify(this, 'reset.done_sensor');
+  }
+
+  async _readAfterReset() {
+    this._rereadOnNextMessage = false;
     await this._readAiSettings();
     await this.readAreas().catch(err => this.error('Reading areas failed', err.message));
-    notify(this, 'reset.done_sensor');
   }
 
   _settingFromSensor(setting, value) {
@@ -215,11 +231,9 @@ class FP400Device extends ZigBeeDevice {
 
 
   _startTimers() {
-    this._readPresence();
     this._startLuxTimer();
     this._subscribeTimer = this.homey.setInterval(() => this._keepTrackingAlive(), SUBSCRIBE_EVERY_MS);
     this._peopleTimer = this.homey.setInterval(() => this._pollPeople(), PEOPLE_POLL_MS);
-    this._syncStateTimer(); // the 1-second zone clock only runs while there are zones
     this._keepTrackingAlive();
     this._pollPeople();
   }
@@ -236,7 +250,8 @@ class FP400Device extends ZigBeeDevice {
   _stopTimers() {
     if (this._luxTimer) this.homey.clearInterval(this._luxTimer);
     if (this._learningTimer) this.homey.clearTimeout(this._learningTimer);
-    for (const timer of [this._subscribeTimer, this._peopleTimer, this._stateTimer]) {
+    if (this._zoneDeadlineTimer) this.homey.clearTimeout(this._zoneDeadlineTimer);
+    for (const timer of [this._subscribeTimer, this._peopleTimer]) {
       if (timer) this.homey.clearInterval(timer);
     }
   }
@@ -300,7 +315,7 @@ class FP400Device extends ZigBeeDevice {
   _onPresence(present) {
     const wasPresent = this.getCapabilityValue('alarm_motion') === true;
     this.setCapabilityValue('alarm_motion', present).catch(this.error);
-    if (present && !wasPresent) this.homey.setTimeout(() => this._pollPeople(), 1000);
+    if (present !== wasPresent) this._pollPeople(); // the count follows presence right away
     if (present && this._learning && !this._learning.movement) {
       this._learning.movement = true;
       notify(this, 'learning.movement');
@@ -318,16 +333,6 @@ class FP400Device extends ZigBeeDevice {
       this._onPresence(Boolean(value && value.occupied));
     } catch (err) {
       this.error('Reading presence failed', err.message);
-    }
-  }
-
-  _syncStateTimer() {
-    const needed = Object.keys(this.getZones()).length > 0;
-    if (needed && !this._stateTimer) {
-      this._stateTimer = this.homey.setInterval(() => this._publishZones([]), 1000);
-    } else if (!needed && this._stateTimer) {
-      this.homey.clearInterval(this._stateTimer);
-      this._stateTimer = null;
     }
   }
 
@@ -416,7 +421,7 @@ class FP400Device extends ZigBeeDevice {
     this.tracker.setZones(zones);
     this._lastEmitted = '';
     this._publishZones([]);
-    this._syncStateTimer();
+    scheduleZoneDeadline(this);
     this._keepTrackingAlive();
     return zones;
   }
@@ -448,6 +453,7 @@ class FP400Device extends ZigBeeDevice {
 
   _publishZones(events) {
     const states = this.zoneStates();
+    scheduleZoneDeadline(this); // next moment a zone's "empty after" ends or the positions go stale
     const encoded = JSON.stringify(states);
     if (encoded === this._lastEmitted && !events.length) return;
     this._lastEmitted = encoded;
@@ -474,9 +480,14 @@ class FP400Device extends ZigBeeDevice {
 
   /* ------------------------------------------------------------ light */
 
-  _startLuxTimer() {
+  /**
+   * The FP400 does not report its light value by itself, so asking is the only way; how often is the
+   * user's setting. `settings` lets onSettings pass the new values (Homey stores them after onSettings).
+   */
+  _startLuxTimer(settings = this.getSettings()) {
     if (this._luxTimer) this.homey.clearInterval(this._luxTimer);
-    const seconds = this.getSetting('lux_poll_interval') || 60;
+    this._luxSettings = settings;
+    const seconds = settings.lux_poll_interval || 60;
     this._luxTimer = this.homey.setInterval(() => this._pollLux(), seconds * 1000);
     this._pollLux();
   }
@@ -499,9 +510,10 @@ class FP400Device extends ZigBeeDevice {
         this.log('Light raw value', measuredValue, '=', lux, 'lux');
       }
       const now = Date.now();
-      const mode = Number(this.getSetting('lux_report_mode') || 3);
-      const threshold = Number(this.getSetting('lux_report_threshold') || 10);
-      const interval = Number(this.getSetting('lux_report_interval') || 600) * 1000;
+      const settings = this._luxSettings || this.getSettings();
+      const mode = Number(settings.lux_report_mode || 3);
+      const threshold = Number(settings.lux_report_threshold || 10);
+      const interval = Number(settings.lux_report_interval || 600) * 1000;
       const last = this._luxShown;
       const changed = last === undefined || (last === 0 ? lux !== 0 : Math.abs(lux - last) / last * 100 >= threshold);
       const due = now - (this._luxShownAt || 0) >= interval;
@@ -519,8 +531,8 @@ class FP400Device extends ZigBeeDevice {
 
   async onSettings({ newSettings, changedKeys }) {
     if (changedKeys.some(k => k.startsWith('lux_'))) {
-      // apply after Homey stored the new values
-      this.homey.setTimeout(() => { this._luxShown = undefined; this._startLuxTimer(); }, 500);
+      this._luxShown = undefined;
+      this._startLuxTimer(newSettings); // the new values directly, no waiting for Homey to store them
     }
     // all sensor settings: write and read back; if the sensor does not confirm, Homey keeps the old value
     for (const entry of this._settingsTable()) {

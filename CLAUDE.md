@@ -2,7 +2,7 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.7.2**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.8.0**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
@@ -24,6 +24,18 @@ De presence logica van de FP300 is een toestandsmachine. **Voeg hier geen tijdsr
 - Temperatuur, vocht en licht (0.7.1): niet meer via `registerCapability` (die logt en zet elke melding), maar via `_listenMeasurement`: `attr.measuredValue` van het cluster, omrekenen, en alleen zetten en loggen als de waarde veranderd is. Lichtomrekening zoals homey-zigbeedriver: `10^((raw - 1) / 10000)`, afgerond.
 - Statusberichten (0.7.2): `0x00DF` stuurt de sensor uit zichzelf (de app vraagt hem nooit op; inhoud onbekend, tag 0x2C lijkt de signaalsterkte). `0x00F7` en `0x00DF` worden alleen nog volledig gelogd tijdens AI leren (diagnose). De batterij wordt alleen gezet en gelogd als hij veranderd is.
 - Tests: `test/fp300-state.js` speelt echte logs na via `_onFrame` (onderdeel van `npm test`).
+
+**Overzicht tijd in de hele app (0.8.0).** Weggehaald of vervangen door gebeurtenissen/statussen:
+- zoneklok van 1 s (FP300 en FP400) -> één timer op het exacte moment dat een zone verandert (`tracker.nextDeadline()`, `scheduleZoneDeadline` in `lib/deviceUtil.js`, aangeroepen in `_publishZones`);
+- FP300 configuratie/firmware/rapportage per dag/week -> alleen als er een reden is: nooit gedaan, nieuwe appversie (`_newSinceLast`, store `configReadVersion`/`reportingVersion`), opnieuw aanmelden, standaardinstellingen herstellen;
+- FP300 leerproeven (`_checkLearning` elke minuut, `_probeLearningLater` na 30 min) -> weg (onderzoek afgerond: `0x0157` blijft 1);
+- FP300 versturen 50 ms na een bericht -> direct; waarschuwing "wordt verstuurd" volgt de uitkomst van het versturen in plaats van 1,5 s;
+- FP300 voortgangscapability 60 s na afloop -> verdwijnt samen met de uitkomst in de instellingen;
+- FP400 opstart met vaste vertragingen (5, 8, 11 s) -> stap voor stap, elke stap wacht op het antwoord (`_startup`);
+- FP400 personen tellen 1 s na aanwezigheid -> direct bij elke verandering van aanwezigheid;
+- FP400 lichtinstellingen 0,5 s na opslaan -> direct met de nieuwe waarden; reset: geen 3 s wachten, maar nu lezen en nog eens bij het volgende bericht.
+
+Bewust tijd (geen status beschikbaar of het IS een tijd): `TRACK_RESTART_MS` (FP300 stopt zijn meting zelf), batterij elke 4 uur (firmware 6542 stuurt hem niet zelf), de "leeg na" tijd per zone en de afwezigheidsvertraging (instellingen van de gebruiker), FP300 leervenster 10 min (advies Aqara, geen "klaar" signaal), FP400 leer-timeout 15 min (vangnet als er geen resultaat komt), FP400 abonnement op posities elke 10 s (protocol), FP400 licht opvragen (de FP400 meldt licht niet zelf; interval is een instelling), `FRESH_MS` (posities ouder dan 30 s tellen niet), "Eigen instelling" zetten 1 s na `onSettings` (Homey overschrijft instellingen die tijdens onSettings gezet worden), de live pagina's (1 s verversen) en UI animaties. Kandidaten die eerst een test met de sensor nodig hebben: FP400 personenaantal via rapportage in plaats van elke 30 s vragen; live pagina's via Homey realtime events in plaats van elke seconde vragen.
 
 ## 0. Belangrijk: versies 0.6.4 tot en met 0.6.6 zijn teruggedraaid
 
