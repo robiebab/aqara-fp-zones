@@ -74,7 +74,11 @@ class FP300Device extends ZigBeeDevice {
     this._viewerTrackAt = 0;
     await this._migrateZoneIds().catch(err => this.error('Zone id migration failed', err.message));
     this.tracker = new BlockTracker(this.getZones());
-    this.tracker.update(this._zonePresence(), this.getCapabilityValue('target_distance'), Date.now());
+    // a distance from before this start belongs to an earlier session: not used
+    if (this.getCapabilityValue('target_distance') !== null) {
+      await this.setCapabilityValue('target_distance', null).catch(this.error);
+    }
+    this.tracker.update(this._zonePresence(), null, Date.now());
     // absence timeouts of zones run on Homey's clock, not on sensor reports
     // zone "empty after" times: one timer for the next moment a zone changes (see scheduleZoneDeadline)
     // What the sensor last reported: null until the first report or read after this start.
@@ -309,6 +313,20 @@ class FP300Device extends ZigBeeDevice {
     this._session = false;
     this._pending.delete('trackDistance');
     this.log(`Session ended (${source}): mmWave and PIR off, the measurement is not continued`);
+    this._clearDistance('nobody present');
+  }
+
+  /**
+   * A distance belongs to a session. When the sensor confirmed nobody is there, the last distance is
+   * no longer true, so it is cleared: on re-entry no zone can use the distance of last time, and the
+   * first distance that comes in is a new measurement. Also cleared at app start (unknown since).
+   */
+  _clearDistance(reason) {
+    this._lastDistanceAt = 0;
+    if (this.getCapabilityValue('target_distance') === null) return;
+    this.setCapabilityValue('target_distance', null).catch(this.error);
+    this.log(`Distance cleared (${reason})`);
+    this._updateZones();
   }
 
   /** Both reported off: read both back from the sensor; only if both really are off, switch off. */

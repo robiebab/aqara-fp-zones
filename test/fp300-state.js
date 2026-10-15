@@ -165,6 +165,22 @@ async function test(name, fn) { await fn(); passed++; console.log(`ok   ${name}`
     assert.strictEqual(d._newSinceLast('configReadVersion'), true, 'new app version');
   });
 
+  await test('the distance is cleared when nobody is there: on re-entry no zone uses the distance of last time', async () => {
+    const d = device({}, () => ({ [MMW]: 0, [PIR]: 0 }));
+    await at(d, '14:00:00.000', MMW, 1);
+    await at(d, '14:00:01.000', DIST, 150, 0x23);                  // in the zone (1.0 to 2.0 m)
+    assert.strictEqual(d.zoneStates()[1].occupied, true);
+    await at(d, '14:00:30.000', MMW, 0);                            // nobody (confirmed by the check)
+    assert.strictEqual(d._caps.target_distance, null, 'distance cleared');
+    assert.ok(d.logs.includes('Distance cleared (nobody present)'));
+    await at(d, '14:05:00.000', MMW, 1);                            // somebody enters again
+    assert.strictEqual(d.zoneStates()[1].occupied, false, 'no zone on the old 1.5 m');
+    await at(d, '14:05:01.000', DIST, 320, 0x23);                  // the first new distance: outside the zone
+    assert.strictEqual(d.zoneStates()[1].occupied, false);
+    await at(d, '14:05:03.000', DIST, 160, 0x23);                  // walks into the zone
+    assert.strictEqual(d.zoneStates()[1].occupied, true);
+  });
+
   Date.now = realNow;
   console.log(`\n${passed} state machine tests passed`);
 })().catch(err => { console.error(err); process.exit(1); });

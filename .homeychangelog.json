@@ -362,5 +362,9 @@
   "0.8.0": {
     "en": "Event and state driven instead of timers wherever possible: zone timeouts with one exact timer, FP300 configuration only read when needed, no learning probes, sending right after a message, FP400 startup step by step and light settings applied at once.",
     "nl": "Gebeurtenissen en statussen in plaats van timers waar het kan: zonetijden met één exacte timer, FP300 configuratie alleen uitlezen als het nodig is, geen leerproeven meer, versturen direct na een bericht, FP400 opstart stap voor stap en lichtinstellingen direct toegepast."
+  },
+  "0.8.1": {
+    "en": "FP300: the distance is cleared once the sensor confirmed nobody is there (and at app start), so a zone never uses the distance of last time; the first distance after entering is always a new measurement.",
+    "nl": "FP300: de afstand wordt leeggemaakt zodra de sensor bevestigd heeft dat er niemand is (en bij het starten van de app), zodat een zone nooit de afstand van de vorige keer gebruikt; de eerste afstand na binnenkomst is altijd een nieuwe meting."
   }
 }
