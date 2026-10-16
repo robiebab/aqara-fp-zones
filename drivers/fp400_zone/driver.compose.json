@@ -1,7 +1,7 @@
 {
   "name": {
-    "en": "Zone (FP300 / FP400)",
-    "nl": "Zone (FP300 / FP400)"
+    "en": "Create Zone (FP300/FP400)",
+    "nl": "Zone aanmaken (FP300/FP400)"
   },
   "class": "sensor",
   "capabilities": [

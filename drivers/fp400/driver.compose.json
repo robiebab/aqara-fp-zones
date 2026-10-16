@@ -1,7 +1,7 @@
 {
   "name": {
-    "en": "Spatial sensor FP400",
-    "nl": "Ruimtesensor FP400"
+    "en": "FP400 (Zigbee)",
+    "nl": "FP400 (Zigbee)"
   },
   "class": "sensor",
   "capabilities": [

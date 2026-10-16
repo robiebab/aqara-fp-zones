@@ -2,7 +2,7 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.8.3**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.8.5**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
@@ -38,6 +38,10 @@ De presence logica van de FP300 is een toestandsmachine. **Voeg hier geen tijdsr
 - FP400 lichtinstellingen 0,5 s na opslaan -> direct met de nieuwe waarden; reset: geen 3 s wachten, maar nu lezen en nog eens bij het volgende bericht.
 
 Bewust tijd (geen status beschikbaar of het IS een tijd): `TRACK_RESTART_MS` (FP300 stopt zijn meting zelf), batterij elke 4 uur (firmware 6542 stuurt hem niet zelf), de "leeg na" tijd per zone en de afwezigheidsvertraging (instellingen van de gebruiker), FP300 leervenster 10 min (advies Aqara, geen "klaar" signaal), FP400 leer-timeout 15 min (vangnet als er geen resultaat komt), FP400 abonnement op posities elke 10 s (protocol), FP400 licht opvragen (de FP400 meldt licht niet zelf; interval is een instelling), `FRESH_MS` (posities ouder dan 30 s tellen niet), "Eigen instelling" zetten 1 s na `onSettings` (Homey overschrijft instellingen die tijdens onSettings gezet worden), de live pagina's (1 s verversen) en UI animaties. Kandidaten die eerst een test met de sensor nodig hebben: FP400 personenaantal via rapportage in plaats van elke 30 s vragen; live pagina's via Homey realtime events in plaats van elke seconde vragen.
+
+## 0000. Namen bij "Apparaat toevoegen" (0.8.4)
+
+FP300 (Zigbee), FP400 (Zigbee), en voor zones "Create Zone (FP300/FP400)" (Engels) / "Zone aanmaken (FP300/FP400)" (Nederlands). Matter drivers weggehaald.
 
 ## 000. Opgeschoond in 0.8.3
 
@@ -129,14 +133,13 @@ lib/wakePattern.js                leert wanneer een slapende sensor wakker wordt
 lib/zigbeeTime.js                 antwoord op tijdvragen (Time cluster 0x000A)
 lib/deviceUtil.js                 ensureCapabilities(), notify(), scheduleZoneDeadline()
 lib/resetDefaults.js              standaardinstellingen herstellen (app instellingen + ZCL reset)
-tools/fp400-icon.py               tekent de FP400 iconen
+tools/fp400-icon.py               tekent het FP400 icoon
+tools/zone-icon.py                tekent het zone icoon (poppetje in een gestippeld gebied op de vloer)
 test/fp300-state.js               toestandsmachine FP300, nagespeeld met echte logs
 test/zone-devices.js              zone apparaten: koppeling via uid, verwijderen, hergebruikte plek
 drivers/fp300/                    FP300 driver, device, instellingen, flowkaarten
 drivers/fp400/                    FP400 driver, device, instellingen, flowkaarten
 drivers/fp400_zone/               zone apparaat (FP300 én FP400), wizard in pair/wizard.html
-drivers/fp300_matter/             FP300 via Matter: alleen manifest (koppelinstructie, iconen), vendor 4447, product 8197
-drivers/fp400_matter/             FP400 via Matter: alleen manifest, vendor 4447, product 8295 (afgeleid uit het Zigbee model `lumi.models.4447_8295`, nog niet bevestigd)
 settings/index.html               app instellingen (GEBOUWD uit ui-src)
 ui-src/                           bron van de webpagina's: theme.css, map.js, wizard.body.html, settings.body.html
 tools/build-ui.py                 bouwt de webpagina's
@@ -305,11 +308,9 @@ Onderhoudsactie `button.reset_defaults` (FP300 en FP400), zie `lib/resetDefaults
 3. daarna worden de echte waarden uit de sensor gelezen.
 Kent een FP300 het commando niet (ZCL status), dan schrijft de app standaardwaarden voor de detectie (mmWave + PIR, gevoeligheid 2, 10 s, AI aan, volledig bereik, meten midden). Voor de FP400 zijn geen gedocumenteerde standaardwaarden; daar blijft het dan bij de app instellingen. Zones in de app blijven altijd bewaard. Of de sensoren het commando ondersteunen, is nog niet getest.
 
-## 8d. Matter (0.6.0)
+## 8d. Matter (0.6.0, weggehaald in 0.8.4)
 
-- Homey regelt Matter apparaten zelf: een app kan alleen een driver manifest leveren met koppelinstructie en iconen (Homey documentatie "Creating a Matter Driver"). De capabilities in het manifest dienen alleen voor de App Store; Homey bepaalt ze zelf. Er is geen apparaatcode mogelijk, dus geen zones, afstand, instellingen of onderhoudsacties via Matter.
-- Over Matter geeft de FP400 volgens Aqara alleen één aanwezigheid en één lichtsensor.
-- Klopt de vendor/product id niet, dan kiest Homey deze driver niet en koppelt hij de sensor als algemeen Matter apparaat. De echte id's staan na het koppelen in de geavanceerde instellingen van het apparaat.
+De Matter drivers (`fp300_matter`, `fp400_matter`) zijn op verzoek van de gebruiker weggehaald: hij gebruikt alleen Zigbee. Via Matter kan een Homey app toch alleen een koppelinstructie en iconen leveren (geen zones of instellingen).
 
 ## 8f. Log 14 oktober: bewegingsalarm gang lang aan (0.6.10)
 
@@ -328,7 +329,7 @@ De FP300 meet alleen de dichtstbijzijnde persoon, dus een aantal kan alleen 0 of
 
 ## 8i. Iconen (0.6.21, 0.6.22)
 
-FP300 iconen (Zigbee en Matter) zijn aangeleverd door de gebruiker. De FP400 iconen worden gemaakt met `tools/fp400-icon.py` (shapely): net als bij het FP300 icoon een ronde basis (muurplaat) achter het apparaat, met de FP400 schijf eroverheen; het sensorvenster is, in de stijl van het FP300 icoon, een afgeronde 'tong' die aan de dikke buitenlijn hangt, met uitlopende bochten aan de bovenkant en lijndikte 26; de dunne randlijn van de voorkant stopt bij het venster. Een tweede sleuf op de zijkant (zoals bij de FP300) past niet: de schijf is te dun. De clip zit verborgen achter de schijf. 960 × 960, kleur #231f20, buitenlijnen 40, binnenlijnen 18, ronde uiteinden; verborgen lijnen worden geometrisch weggehaald (geen SVG masks). De Matter versie neemt het Matter logo uit het FP300 Matter icoon en houdt 50 px afstand.
+Het FP300 icoon is aangeleverd door de gebruiker. De FP400 iconen worden gemaakt met `tools/fp400-icon.py` (shapely): net als bij het FP300 icoon een ronde basis (muurplaat) achter het apparaat, met de FP400 schijf eroverheen; het sensorvenster is, in de stijl van het FP300 icoon, een afgeronde 'tong' die aan de dikke buitenlijn hangt, met uitlopende bochten aan de bovenkant en lijndikte 26; de dunne randlijn van de voorkant stopt bij het venster. Een tweede sleuf op de zijkant (zoals bij de FP300) past niet: de schijf is te dun. De clip zit verborgen achter de schijf. 960 × 960, kleur #231f20, buitenlijnen 40, binnenlijnen 18, ronde uiteinden; verborgen lijnen worden geometrisch weggehaald (geen SVG masks). 
 
 ## 8j. Onderhoud pas als er niemand is (0.6.28)
 
@@ -360,7 +361,6 @@ Tijden staan in de store, zodat een herstart van de app niets extra uitleest (`_
 - Sinds 0.5.24: instelling `distance_push` ("Afstand automatisch laten melden"). `_runDistancePushJob` leest eerst de rapportagetabel (gelogd als `Report table ...`), probeert `0x015F` toe te voegen, en haalt bij `INSUFFICIENT_SPACE` één voor één de standaardmelding van licht, vocht, temperatuur weg (maxInterval 0xFFFF volgens ZCL) tot het past. Weggehaalde meldingen staan in de store (`freedReporting`); uitzetten zet alles terug. Stappen die op een slapende sensor stranden, gaan verder bij het volgende wakkere moment. Uitkomst bij de gebruiker nog onbekend.
 - Hoe vaak de FP300 een afstand stuurt tijdens de meting (elke seconde, of alleen bij verandering, en vanaf welke stap): onbekend. De app logt elke afstand als `Distance x m (previous y s ago)`.
 - FP400 leerresultaat code 0 = geslaagd: nog niet bevestigd.
-- FP400 Matter product id 8295 is afgeleid, niet bevestigd.
 - FP400 licht: ruw `0`; klopt de schaal?
 - FP400 herstarten: geen Zigbee opdracht bekend, daarom niet aanwezig. Niet verzinnen.
 - Fabrikantnaam in de driver manifesten: `Aqara` en `LUMI`; werkt bij de gebruiker.

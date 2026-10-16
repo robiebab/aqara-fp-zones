@@ -4,8 +4,7 @@ Draws the FP400 icons in the style of the FP300 icons: 960 x 960, colour #231f20
 thick (40) outer lines and thin (18) inner lines. Like the FP300 icon, a round base (the wall plate)
 sits behind the device; the FP400 disc is drawn over it. The grey sensor window starts at the top
 edge of the disc and runs over the rim onto its side (product photo). Hidden lines are removed geometrically (shapely), so the SVG needs
-no masks. The Matter version takes the Matter logo from the FP300 Matter icon and keeps the drawing
-50 px clear of it.   Usage: pip install shapely && python3 tools/fp400-icon.py
+no masks.   Usage: pip install shapely && python3 tools/fp400-icon.py
 """
 import math, os, re
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
@@ -87,29 +86,16 @@ def fit(parts_list, box=(70, 70, 890, 890)):
     oy = box[1] + ((box[3]-box[1]) - (max(ys)-min(ys)) * s) / 2 - min(ys) * s
     return s, ox, oy
 
-def svg(matter=False):
+def svg():
     s, ox, oy = fit([thick, thin, medium], (70, 70, 890, 890))
     T = lambda parts: [[(x*s+ox, y*s+oy) for x, y in p] for p in parts]
     th, tn, md = T(thick), T(thin), T(medium)
-    if matter:
-        # keep the drawing clear of the Matter logo (bottom right), without SVG masks
-        from shapely.geometry import Point
-        hole = [Point(792, 794).buffer(150).union(Point(792, 794).buffer(1).buffer(0))]
-        from shapely.geometry import box
-        hole = [box(636, 642, 949, 947).buffer(50)]
-        cutp = lambda parts: [q for p in parts for q in visible(p, False, hole)]
-        th, tn, md = cutp(th), cutp(tn), cutp(md)
     g = (f'<g fill="none" stroke="{COL}" stroke-linecap="round" stroke-linejoin="round">'
          f'<path d="{d_of(tn)}" stroke-width="{TN}"/>'
          f'<path d="{d_of(md)}" stroke-width="{TW}"/>'
          f'<path d="{d_of(th)}" stroke-width="{TH}"/>'
          '</g>')
-    if not matter:
-        return f'<svg viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg">{g}</svg>'
-    m = open(os.path.join(ROOT, 'drivers/fp300_matter/assets/icon.svg')).read()
-    logo = ''.join(re.findall(r'<path\b[^>]*?/>', m)[1:])
-    return f'<svg viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg">{g}<g fill="#000">{logo}</g></svg>'
+    return f'<svg viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg">{g}</svg>'
 
-for rel, matter in (('drivers/fp400/assets/icon.svg', False), ('drivers/fp400_matter/assets/icon.svg', True), ('drivers/fp400_matter/assets/learn.svg', True)):
-    open(os.path.join(ROOT, rel), 'w').write(svg(matter))
-print('FP400 icons written')
+open(os.path.join(ROOT, 'drivers/fp400/assets/icon.svg'), 'w').write(svg())
+print('FP400 icon written')

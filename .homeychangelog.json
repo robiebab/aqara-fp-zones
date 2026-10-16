@@ -374,5 +374,13 @@
   "0.8.3": {
     "en": "Code cleaned up: old migrations, learning investigation leftovers and debug code removed. Fixed: the card 'Distance changed' now fires.",
     "nl": "Code opgeschoond: oude migraties, resten van het leeronderzoek en debugcode weggehaald. Opgelost: de kaart 'Afstand is veranderd' gaat nu af."
+  },
+  "0.8.4": {
+    "en": "Matter drivers removed. New names when adding a device: FP300 (Zigbee), FP400 (Zigbee) and Create Zone (FP300/FP400).",
+    "nl": "Matter drivers weggehaald. Nieuwe namen bij het toevoegen van een apparaat: FP300 (Zigbee), FP400 (Zigbee) en Zone aanmaken (FP300/FP400)."
+  },
+  "0.8.5": {
+    "en": "New icon for zones: a person standing in a dashed area.",
+    "nl": "Nieuw icoon voor zones: een poppetje in een gestippeld gebied."
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": {
-    "en": "Presence sensor FP300",
-    "nl": "Aanwezigheidssensor FP300"
+    "en": "FP300 (Zigbee)",
+    "nl": "FP300 (Zigbee)"
   },
   "class": "sensor",
   "capabilities": [
