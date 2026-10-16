@@ -386,5 +386,9 @@
   "0.8.6": {
     "en": "Fresh look: new app icon, teal brand colour, new App Store images and new images when adding a device.",
     "nl": "Frisse look: nieuw app icoon, groenblauwe merkkleur, nieuwe App Store afbeeldingen en nieuwe afbeeldingen bij het toevoegen van een apparaat."
+  },
+  "0.8.7": {
+    "en": "Minimal look: graphite brand colour, a simple app icon (a person in a dashed zone), plain App Store images, and device images without colour.",
+    "nl": "Minimalistische look: grafiet als merkkleur, een eenvoudig app icoon (een persoon in een gestippelde zone), effen App Store afbeeldingen, en apparaatafbeeldingen zonder kleur."
   }
 }

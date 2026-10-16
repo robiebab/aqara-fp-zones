@@ -1,6 +1,6 @@
 {
   "id": "nl.community.aqarafpzones",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "compatibility": ">=12.2.0",
   "sdk": 3,
   "platforms": [
@@ -20,7 +20,7 @@
   "permissions": [
     "homey:wireless:zigbee"
   ],
-  "brandColor": "#0D9488",
+  "brandColor": "#1F2328",
   "author": {
     "name": "Robert Hertzer"
   },
