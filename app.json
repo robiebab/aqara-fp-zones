@@ -1437,49 +1437,6 @@
     },
     {
       "name": {
-        "en": "FP300 via Matter",
-        "nl": "FP300 via Matter"
-      },
-      "class": "sensor",
-      "capabilities": [
-        "alarm_motion",
-        "measure_temperature",
-        "measure_humidity",
-        "measure_luminance",
-        "measure_battery"
-      ],
-      "platforms": [
-        "local"
-      ],
-      "connectivity": [
-        "matter"
-      ],
-      "energy": {
-        "batteries": [
-          "CR2450",
-          "CR2450"
-        ]
-      },
-      "images": {
-        "small": "/drivers/fp300_matter/assets/images/small.png",
-        "large": "/drivers/fp300_matter/assets/images/large.png",
-        "xlarge": "/drivers/fp300_matter/assets/images/xlarge.png"
-      },
-      "matter": {
-        "vendorId": 4447,
-        "productId": 8197,
-        "learnmode": {
-          "image": "/drivers/fp300_matter/assets/learn.svg",
-          "instruction": {
-            "en": "For an FP300 set to Matter (Thread) in the Aqara Home app. Hold the reset button for more than 5 seconds until the blue light flashes three times, then scan the Matter code on the sensor. Note: via Matter, Homey handles the sensor itself; zones, distance and the FP300 settings of this app are only available when the FP300 uses Zigbee.",
-            "nl": "Voor een FP300 die in de Aqara Home app op Matter (Thread) staat. Houd de resetknop langer dan 5 seconden ingedrukt tot het blauwe lampje drie keer knippert, en scan daarna de Matter code op de sensor. Let op: via Matter regelt Homey de sensor zelf; zones, afstand en de FP300 instellingen van deze app zijn er alleen als de FP300 op Zigbee staat."
-          }
-        }
-      },
-      "id": "fp300_matter"
-    },
-    {
-      "name": {
         "en": "FP400 (Zigbee)",
         "nl": "FP400 (Zigbee)"
       },
@@ -1781,40 +1738,6 @@
           }
         }
       ]
-    },
-    {
-      "name": {
-        "en": "FP400 via Matter",
-        "nl": "FP400 via Matter"
-      },
-      "class": "sensor",
-      "capabilities": [
-        "alarm_motion",
-        "measure_luminance"
-      ],
-      "platforms": [
-        "local"
-      ],
-      "connectivity": [
-        "matter"
-      ],
-      "images": {
-        "small": "/drivers/fp400_matter/assets/images/small.png",
-        "large": "/drivers/fp400_matter/assets/images/large.png",
-        "xlarge": "/drivers/fp400_matter/assets/images/xlarge.png"
-      },
-      "matter": {
-        "vendorId": 4447,
-        "productId": 8295,
-        "learnmode": {
-          "image": "/drivers/fp400_matter/assets/learn.svg",
-          "instruction": {
-            "en": "For an FP400 set to Matter (Thread) in the Aqara Home app. Put the sensor in pairing mode and scan the Matter code. Note: over Matter the FP400 only offers presence and light; zones, positions and people counting from this app need the FP400 on Zigbee.",
-            "nl": "Voor een FP400 die in de Aqara Home app op Matter (Thread) staat. Zet de sensor in koppelmodus en scan de Matter code. Let op: via Matter geeft de FP400 alleen aanwezigheid en licht; zones, posities en personen tellen van deze app werken alleen als de FP400 op Zigbee staat."
-          }
-        }
-      },
-      "id": "fp400_matter"
     },
     {
       "name": {
