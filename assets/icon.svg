@@ -1,11 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960" fill="none" stroke="#000" stroke-width="40" stroke-linecap="round" stroke-linejoin="round">
-  <!-- radar field opening upward from the sensor -->
-  <path d="M480 820 L190 318"/>
-  <path d="M480 820 L770 318"/>
-  <path d="M190 318 A580 580 0 0 1 770 318"/>
-  <!-- zone with a person -->
-  <rect x="352" y="380" width="256" height="224" rx="36"/>
-  <circle cx="480" cy="460" r="34"/>
-  <path d="M424 556 q56 -56 112 0"/>
-  <circle cx="480" cy="820" r="30" fill="#000" stroke="none"/>
+<svg viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg">
+  <g fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round">
+    <!-- the zone: dashed area -->
+    <rect x="200" y="150" width="560" height="450" rx="70" stroke-width="34" stroke-dasharray="58 52"/>
+    <!-- a person inside -->
+    <circle cx="480" cy="300" r="62" stroke-width="40"/>
+    <path d="M380 500 A100 100 0 0 1 580 500" stroke-width="40"/>
+    <!-- the sensor below, seeing the zone -->
+    <path d="M330 760 A212 212 0 0 1 630 760" stroke-width="40"/>
+    <path d="M405 800 A106 106 0 0 1 555 800" stroke-width="40"/>
+    <circle cx="480" cy="845" r="22" fill="#000" stroke="none"/>
+  </g>
 </svg>

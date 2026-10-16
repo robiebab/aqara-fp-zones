@@ -2,7 +2,7 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.8.5**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.8.6**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
@@ -38,6 +38,10 @@ De presence logica van de FP300 is een toestandsmachine. **Voeg hier geen tijdsr
 - FP400 lichtinstellingen 0,5 s na opslaan -> direct met de nieuwe waarden; reset: geen 3 s wachten, maar nu lezen en nog eens bij het volgende bericht.
 
 Bewust tijd (geen status beschikbaar of het IS een tijd): `TRACK_RESTART_MS` (FP300 stopt zijn meting zelf), batterij elke 4 uur (firmware 6542 stuurt hem niet zelf), de "leeg na" tijd per zone en de afwezigheidsvertraging (instellingen van de gebruiker), FP300 leervenster 10 min (advies Aqara, geen "klaar" signaal), FP400 leer-timeout 15 min (vangnet als er geen resultaat komt), FP400 abonnement op posities elke 10 s (protocol), FP400 licht opvragen (de FP400 meldt licht niet zelf; interval is een instelling), `FRESH_MS` (posities ouder dan 30 s tellen niet), "Eigen instelling" zetten 1 s na `onSettings` (Homey overschrijft instellingen die tijdens onSettings gezet worden), de live pagina's (1 s verversen) en UI animaties. Kandidaten die eerst een test met de sensor nodig hebben: FP400 personenaantal via rapportage in plaats van elke 30 s vragen; live pagina's via Homey realtime events in plaats van elke seconde vragen.
+
+## 00000. Uiterlijk (0.8.6)
+
+Merkkleur `#0D9488` (groenblauw). App icoon (`assets/icon.svg`): gestippelde zone met poppetje en radargolven eronder; lijnicoon zonder vulling of achtergrond, zoals de App Store richtlijnen vragen. App afbeeldingen: verloop in de merkkleur met lichte radarringen, wit icoon en tekst; driver afbeeldingen: lichte mint achtergrond met het driver icoon in donker groenblauw. Allemaal gemaakt met `tools/brand-images.py`; na het wijzigen van een icoon opnieuw draaien.
 
 ## 0000. Namen bij "Apparaat toevoegen" (0.8.4)
 
@@ -135,6 +139,7 @@ lib/deviceUtil.js                 ensureCapabilities(), notify(), scheduleZoneDe
 lib/resetDefaults.js              standaardinstellingen herstellen (app instellingen + ZCL reset)
 tools/fp400-icon.py               tekent het FP400 icoon
 tools/zone-icon.py                tekent het zone icoon (poppetje in een gestippeld gebied op de vloer)
+tools/brand-images.py             maakt de App Store afbeeldingen en de driver afbeeldingen uit de SVG iconen
 test/fp300-state.js               toestandsmachine FP300, nagespeeld met echte logs
 test/zone-devices.js              zone apparaten: koppeling via uid, verwijderen, hergebruikte plek
 drivers/fp300/                    FP300 driver, device, instellingen, flowkaarten
