@@ -3,7 +3,7 @@
 Homey Pro app voor de Aqara **FP300** en **FP400** aanwezigheidssensoren via **Zigbee**, zonder Aqara hub. Met afstand, live posities, zones die je zelf inkleurt en alle sensorinstellingen in Homey.
 
 **Auteur:** Robert Hertzer
-**Versie:** 0.8.7
+**Versie:** 0.9.1
 **Vereist:** Homey Pro, firmware 12.2.0 of hoger, sensoren in Zigbee modus (omzetten in de Aqara Home app)
 
 ## Functies
@@ -30,6 +30,9 @@ Homey Pro app voor de Aqara **FP300** en **FP400** aanwezigheidssensoren via **Z
 - AI hoge precisie mensherkenning, adaptieve gevoeligheid, AI interferentiedetectie, gevoeligheid, afwezigheidsvertraging
 - Onderhoudsacties: identificeren, AI ruimtelijk leren (met melding als het klaar is), standaardinstellingen herstellen zonder opnieuw te koppelen
 - Helderheid: opvragen en bijwerken op interval, drempel of beide
+
+### Logging
+- Tabblad **Logging** in de app instellingen: aan en uit te zetten, toont live wat de app doet (zoals `homey app run`), met filter per apparaat, kopiëren en wissen; de laatste 500 regels blijven in het geheugen
 
 ### Zones
 - Een zone wordt een **eigen Homey apparaat** dat je in elke ruimte kunt zetten, met bewegingsalarm, aantal personen en flowkaarten (persoon kwam binnen, persoon verliet zone)

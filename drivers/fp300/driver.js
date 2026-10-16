@@ -1,12 +1,13 @@
 'use strict';
 
 const { ZigBeeDriver } = require('homey-zigbeedriver');
+const { withLogBook } = require('../../lib/logBook');
 
 function inRange(value, min, max) {
   return typeof value === 'number' && value >= Math.min(min, max) && value <= Math.max(min, max);
 }
 
-class FP300Driver extends ZigBeeDriver {
+class FP300Driver extends withLogBook(ZigBeeDriver) {
 
   async onInit() {
     this.learningDoneTrigger = this.homey.flow.getDeviceTriggerCard('fp300_learning_done');

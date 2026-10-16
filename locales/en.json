@@ -68,7 +68,7 @@
     "live_fp300_pir": "This sensor is set to \"PIR only\". Set Detection with to mmWave in its settings, otherwise there is no distance."
   },
   "editor": {
-    "title": "Zones",
+    "title": "FP Zones",
     "intro": "Adjust your zones, or paint ignore spots and what lies outside the room.",
     "no_sensor": "No FP300 or FP400 has been added yet.",
     "no_zones": "No zones yet. Create a zone via Add device, Aqara FP Zones, Zone (FP300 / FP400).",
@@ -137,7 +137,19 @@
     "hint_range": "Where the sensor itself detects presence. Walk through the room: the block you stand in lights up. Paint the blocks where it should see you and save. After that the sensor works on its own presence, without continuous distance measurement.",
     "range_info": "Detects from __from__ to __to__ m (__count__ blocks)",
     "range_none": "No blocks chosen yet",
-    "occupied_plain": "Occupied"
+    "occupied_plain": "Occupied",
+    "page_zones": "Zones",
+    "page_logs": "Logging",
+    "logs_enable": "Logging",
+    "logs_hint": "Shows live what the app does, the same lines as homey app run. The last 500 lines are kept until you clear them or the app restarts. Switch it off when you are done; that saves memory.",
+    "logs_all": "All sources",
+    "logs_copy": "Copy",
+    "logs_clear": "Clear",
+    "logs_copied": "Log copied",
+    "logs_empty": "No lines yet. As soon as something happens, it appears here.",
+    "logs_off": "Logging is off. Switch it on to see lines.",
+    "logs_on_btn": "On",
+    "logs_off_btn": "Off"
   },
   "actions": {
     "identify": "Identify",

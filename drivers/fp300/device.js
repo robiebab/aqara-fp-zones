@@ -14,6 +14,7 @@ const {
 const { WakePattern } = require('../../lib/wakePattern');
 const { appDefaults, isZclStatus } = require('../../lib/resetDefaults');
 const { buildTimeReadResponse } = require('../../lib/zigbeeTime');
+const { withLogBook } = require('../../lib/logBook');
 
 const newUid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const VIEWER_TRACK_EVERY_MS = 5 * 60 * 1000;
@@ -44,7 +45,7 @@ const RANGE_BLOCKS = 24;
 const STRUCT_MAX_AGE_MS = 4 * 60 * 60 * 1000; // same refresh age as fp300BatteryPoll in Z2M
 
 
-class FP300Device extends ZigBeeDevice {
+class FP300Device extends withLogBook(ZigBeeDevice) {
 
   /** Every log line starts with the device name, so several sensors are easy to tell apart. */
   log(...args) {
@@ -56,7 +57,23 @@ class FP300Device extends ZigBeeDevice {
   /** Sensor type, used by the zone wizard and the settings page. */
   get kind() { return 'fp300'; }
 
-  async onNodeInit({ zclNode }) {
+  /**
+   * Start of the device. A new device says so in the log, with its Zigbee details, so a problem right
+   * after pairing can be traced. (An error while starting is already logged by homey-zigbeedriver,
+   * through this.error, so it shows in the Logging tab too.)
+   */
+  async onNodeInit(args) {
+    if (this.isFirstInit()) {
+      const node = (args && args.node) || {};
+      const ieee = this.getSetting('zb_ieee_address') || node.ieeeAddress || '?';
+      const model = this.getSetting('zb_product_id') || node.modelId || '?';
+      const maker = this.getSetting('zb_manufacturer_name') || node.manufacturerName || '?';
+      this.log(`New FP300 paired: "${this.getName()}", IEEE ${ieee}, model ${model}, maker ${maker}`);
+    }
+    return this._start(args);
+  }
+
+  async _start({ zclNode }) {
     this._pending = new Map(); // attributeName -> value, written when the sensor is awake
     this._oneShots = new Map(); // action -> { run, done }: sent once, only right after the sensor spoke
     this._pendingStructRead = false;

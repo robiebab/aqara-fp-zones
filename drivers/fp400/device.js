@@ -10,6 +10,7 @@ const { ensureCapabilities, notify, scheduleZoneDeadline } = require('../../lib/
 const { AREAS, cellsToMask, maskToCells, parseCells } = require('../../lib/fp400Areas');
 const { cellOf } = require('../../lib/fp400Tracking');
 const { appDefaults, isZclStatus } = require('../../lib/resetDefaults');
+const { withLogBook } = require('../../lib/logBook');
 const {
   decodeTrackingFrame, decodeMotionEvent, parseZone, ZoneTracker,
 } = require('../../lib/fp400Tracking');
@@ -22,7 +23,7 @@ const VIEWER_HOLD_MS = 60000;
 const newUid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const AQARA_CLUSTERS = [AqaraFp400ConfigCluster.ID, AqaraFp400RadarCluster.ID, AqaraFp400LocationCluster.ID];
 
-class FP400Device extends ZigBeeDevice {
+class FP400Device extends withLogBook(ZigBeeDevice) {
 
   /** Every log line starts with the device name, so several sensors are easy to tell apart. */
   log(...args) {
@@ -34,7 +35,23 @@ class FP400Device extends ZigBeeDevice {
   /** Sensor type, used by the zone wizard and the settings page. */
   get kind() { return 'fp400'; }
 
-  async onNodeInit({ zclNode }) {
+  /**
+   * Start of the device. A new device says so in the log, with its Zigbee details, so a problem right
+   * after pairing can be traced. (An error while starting is already logged by homey-zigbeedriver,
+   * through this.error, so it shows in the Logging tab too.)
+   */
+  async onNodeInit(args) {
+    if (this.isFirstInit()) {
+      const node = (args && args.node) || {};
+      const ieee = this.getSetting('zb_ieee_address') || node.ieeeAddress || '?';
+      const model = this.getSetting('zb_product_id') || node.modelId || '?';
+      const maker = this.getSetting('zb_manufacturer_name') || node.manufacturerName || '?';
+      this.log(`New FP400 paired: "${this.getName()}", IEEE ${ieee}, model ${model}, maker ${maker}`);
+    }
+    return this._start(args);
+  }
+
+  async _start({ zclNode }) {
     this.token = this.getData().token;
     this._viewerUntil = 0;
     this._lastEmitted = '';

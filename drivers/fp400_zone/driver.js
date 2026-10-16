@@ -1,8 +1,9 @@
 'use strict';
 
 const Homey = require('homey');
+const { withLogBook } = require('../../lib/logBook');
 
-class FP400ZoneDriver extends Homey.Driver {
+class FP400ZoneDriver extends withLogBook(Homey.Driver) {
 
   async onInit() {
     this.enteredTrigger = this.homey.flow.getDeviceTriggerCard('zone_person_entered');
@@ -19,30 +20,46 @@ class FP400ZoneDriver extends Homey.Driver {
     return sensor;
   }
 
+  /**
+   * A wizard step: run it, log what went wrong (visible in the Logging tab and with homey app run),
+   * and pass the error on so the wizard shows it too.
+   */
+  _step(name, fn) {
+    return async (...args) => {
+      try {
+        return await fn(...args);
+      } catch (err) {
+        this.error(`Zone wizard: "${name}" failed:`, err.message);
+        throw err;
+      }
+    };
+  }
+
   /** Pairing wizard (drivers/fp400_zone/pair/wizard.html). */
   async onPair(session) {
     const linkedUids = new Set(this.getDevices().map(d => d.getStoreValue('uid')).filter(Boolean));
+    const sensors = this._sensors();
+    this.log(`Zone wizard opened: ${sensors.length} sensor(s) ready (${sensors.map(s => s.getName()).join(', ') || 'none'})`);
+    if (!sensors.length) this.log('Zone wizard: no FP300 or FP400 has finished starting yet, so there is nothing to choose');
 
-    session.setHandler('list_sensors', async () => this._sensors().map(sensor => {
+    session.setHandler('list_sensors', this._step('list sensors', async () => this._sensors().map(sensor => {
       const token = sensor.getData().token;
       const zones = Object.entries(sensor.getZones()).map(([slot, zone]) => ({
         ...zone, slot: Number(slot), added: linkedUids.has(zone.uid),
       }));
       return { token, name: sensor.getName(), kind: sensor.kind, zones };
-    }));
+    })));
 
     // Look of the wizard: the choice made in the app settings (auto, light or dark).
     session.setHandler('get_theme', async () => this.homey.settings.get('theme') || 'auto');
-    // Diagnostics: which look the wizard picked and why (visible with `homey app run`).
-    session.setHandler('theme_debug', async info => { this.log('Theme (wizard)', JSON.stringify(info)); });
 
-    session.setHandler('get_state', async ({ token }) => {
+    session.setHandler('get_state', this._step('live state', async ({ token }) => {
       const sensor = this._sensor(token);
       sensor.markViewer();
       return sensor.getLiveState();
-    });
+    }));
 
-    session.setHandler('save_zone', async ({ token, slot, zone }) => {
+    session.setHandler('save_zone', this._step('save zone', async ({ token, slot, zone }) => {
       const sensor = this._sensor(token);
       const zones = sensor.getZones();
       let target = Number(slot);
@@ -59,8 +76,11 @@ class FP400ZoneDriver extends Homey.Driver {
       };
       // An FP300 sees at most one person (only the nearest distance): no people count for its zones
       if (sensor.kind === 'fp300') device.capabilities = ['alarm_motion'];
+      this.log(`Zone wizard: zone "${device.name}" saved on ${sensor.getName()} (place ${target}), creating the zone device`);
       return device;
-    });
+    }));
+
+    session.setHandler('disconnect', async () => this.log('Zone wizard closed'));
   }
 
 }

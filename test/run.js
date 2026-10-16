@@ -157,4 +157,26 @@ test('Zones: the next moment a zone changes by itself (one timer instead of a cl
   assert.strictEqual(f.nextDeadline(2000), 22000, 'FP400: the zone empties after its own 20 s');
 });
 
+test('Logbook: only while switched on, last 500 lines, pushed live to the settings page', () => {
+  const logBook = require('../lib/logBook');
+  const pushed = [];
+  const listeners = [];
+  const settings = { value: false, get: () => settings.value, on: (e, f) => listeners.push(f) };
+  logBook.attach({ settings, api: { realtime: (event, line) => { pushed.push([event, line.text]); return Promise.resolve(); } } });
+  class Base { log() {} error() {} }
+  class Device extends logBook.withLogBook(Base) { getName() { return 'Hallway'; } }
+  const d = new Device();
+  d.log('before');                                   // logging off: nothing kept
+  assert.strictEqual(logBook.lines().length, 0);
+  settings.value = true; listeners.forEach(f => f('logging'));
+  d.log('mmWave presence on'); d.error(new Error('Timeout'));
+  const lines = logBook.lines();
+  assert.deepStrictEqual(lines.map(l => [l.src, l.level, l.text.split('\n')[0]]), [['Hallway', 'log', 'mmWave presence on'], ['Hallway', 'error', 'Error: Timeout']]);
+  assert.deepStrictEqual(pushed.map(p => p[0]), ['log', 'log']);
+  for (let i = 0; i < 600; i++) d.log(`line ${i}`);
+  assert.strictEqual(logBook.lines().length, logBook.MAX_LINES);
+  assert.strictEqual(logBook.lines()[logBook.MAX_LINES - 1].text, 'line 599');
+  logBook.clear(); assert.strictEqual(logBook.lines().length, 0);
+});
+
 console.log(`\n${passed} tests passed${process.exitCode ? ', some FAILED' : ''}`);

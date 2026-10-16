@@ -390,5 +390,13 @@
   "0.8.7": {
     "en": "Minimal look: graphite brand colour, a simple app icon (a person in a dashed zone), plain App Store images, and device images without colour.",
     "nl": "Minimalistische look: grafiet als merkkleur, een eenvoudig app icoon (een persoon in een gestippelde zone), effen App Store afbeeldingen, en apparaatafbeeldingen zonder kleur."
+  },
+  "0.9.0": {
+    "en": "New Logging tab in the app settings: switch it on to see live what the app does (like homey app run), filter per device, copy and clear.",
+    "nl": "Nieuw tabblad Logging in de app instellingen: zet het aan om live te zien wat de app doet (zoals homey app run), filter per apparaat, kopieer en wis."
+  },
+  "0.9.1": {
+    "en": "Logging: the zone wizard logs every step and error, and a newly paired FP300/FP400 logs its Zigbee details.",
+    "nl": "Logging: de zone wizard logt elke stap en fout, en een nieuw gekoppelde FP300/FP400 logt zijn Zigbee gegevens."
   }
 }

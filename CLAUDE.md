@@ -2,7 +2,7 @@
 
 Dit bestand is bedoeld voor een volgende Claude sessie (of een andere ontwikkelaar). Lees het helemaal voordat je iets verandert.
 
-Stand: versie **0.8.7**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
+Stand: versie **0.9.1**, gebouwd in één lange samenwerking met de gebruiker, oktober 2026.
 
 **Eigenaar en auteur:** Robert Hertzer. Repository: https://github.com/robiebab/aqara-fp-zones. Licentie: MIT (zie `LICENSE`, inclusief de MIT vermelding van het FP400 project waarvan code is overgenomen). Houd die vermelding altijd intact.
 
@@ -38,6 +38,12 @@ De presence logica van de FP300 is een toestandsmachine. **Voeg hier geen tijdsr
 - FP400 lichtinstellingen 0,5 s na opslaan -> direct met de nieuwe waarden; reset: geen 3 s wachten, maar nu lezen en nog eens bij het volgende bericht.
 
 Bewust tijd (geen status beschikbaar of het IS een tijd): `TRACK_RESTART_MS` (FP300 stopt zijn meting zelf), batterij elke 4 uur (firmware 6542 stuurt hem niet zelf), de "leeg na" tijd per zone en de afwezigheidsvertraging (instellingen van de gebruiker), FP300 leervenster 10 min (advies Aqara, geen "klaar" signaal), FP400 leer-timeout 15 min (vangnet als er geen resultaat komt), FP400 abonnement op posities elke 10 s (protocol), FP400 licht opvragen (de FP400 meldt licht niet zelf; interval is een instelling), `FRESH_MS` (posities ouder dan 30 s tellen niet), "Eigen instelling" zetten 1 s na `onSettings` (Homey overschrijft instellingen die tijdens onSettings gezet worden), de live pagina's (1 s verversen) en UI animaties. Kandidaten die eerst een test met de sensor nodig hebben: FP400 personenaantal via rapportage in plaats van elke 30 s vragen; live pagina's via Homey realtime events in plaats van elke seconde vragen.
+
+## 000000. Tabblad Logging (0.9.0)
+
+App instellingen hebben twee tabbladen: Zones en Logging. Elke klasse (app, drivers, devices) is `withLogBook(Base)`: `this.log`/`this.error` gaan zoals altijd naar de Homey log en, als de app instelling `logging` aan staat (standaard uit), ook naar een ringbuffer van 500 regels in het geheugen (`lib/logBook.js`, niets op schijf). Elke nieuwe regel gaat als realtime event `log` naar de pagina (`this.homey.api.realtime`; de pagina luistert met `Homey.on('log')`), dus geen polling. API: `GET /logs` (buffer), `DELETE /logs` (wissen). De pagina toont lokale tijd, bron (apparaatnaam / "Driver id" / "App"), filter per bron, kopiëren, wissen; de zonekaart ververst niet zolang het tabblad Logging open is. Regels die niet via `this.log` lopen (bijvoorbeeld console.log van bibliotheken of meldingen van Homey zelf), staan er niet in.
+
+Koppelen (0.9.1): het Zigbee koppelen zelf (aanmelden, interview) doet Homey; mislukt dat, dan ziet de app niets. Een nieuw apparaat logt bij de eerste start "New FP300/FP400 paired" met IEEE, model en fabrikant (`onNodeInit`, settings `zb_*`); een fout bij het starten logt homey-zigbeedriver zelf via `this.error`. De zone wizard logt openen, opslaan, sluiten en elke fout (`_step` in `drivers/fp400_zone/driver.js`; test `test/zone-wizard.js`). De thema-diagnose van de wizard (`theme_debug`) is weggehaald.
 
 ## 00000. Uiterlijk (0.8.7, keuze van de gebruiker)
 
@@ -137,6 +143,7 @@ lib/wakePattern.js                leert wanneer een slapende sensor wakker wordt
 lib/zigbeeTime.js                 antwoord op tijdvragen (Time cluster 0x000A)
 lib/deviceUtil.js                 ensureCapabilities(), notify(), scheduleZoneDeadline()
 lib/resetDefaults.js              standaardinstellingen herstellen (app instellingen + ZCL reset)
+lib/logBook.js                    tabblad Logging: withLogBook(Base) voor App/Driver/Device, laatste 500 regels in geheugen, realtime event 'log'
 tools/fp400-icon.py               tekent het FP400 icoon
 tools/zone-icon.py                tekent het zone icoon (poppetje in een gestippeld gebied op de vloer)
 tools/brand-images.py             maakt de App Store afbeeldingen en de driver afbeeldingen uit de SVG iconen

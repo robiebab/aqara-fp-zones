@@ -76,13 +76,9 @@
   document.addEventListener('touchstart', function () {}, { passive: true });
 
   // Look: follow Homey (or the choice in the app settings) and use the full height of the sheet.
-  var themePref = 'auto', themeLogged = false;
-  var rerunTheme = fpWatchTheme(function () { return themePref; }, function (info) {
+  var themePref = 'auto';
+  var rerunTheme = fpWatchTheme(function () { return themePref; }, function () {
     if (typeof map !== 'undefined' && map) map.render();
-    if (!themeLogged && info) {
-      themeLogged = true;
-      setTimeout(function () { Homey.emit('theme_debug', fpTheme(themePref)).catch(function () {}); }, 1200);
-    }
   });
   Homey.emit('get_theme').then(function (p) { themePref = p || 'auto'; rerunTheme(); }).catch(function () {});
   function fit() {

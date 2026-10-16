@@ -2,16 +2,20 @@
 
 const EventEmitter = require('events');
 const Homey = require('homey');
+const logBook = require('./lib/logBook');
+
+const { withLogBook } = logBook;
 
 // Register the custom Aqara clusters before any ZCLNode is created.
 require('./lib/AqaraClusters');
 
-class AqaraFpZonesApp extends Homey.App {
+class AqaraFpZonesApp extends withLogBook(Homey.App) {
 
   async onInit() {
     this.bus = new EventEmitter();
     this.bus.setMaxListeners(100);
     this.peopleTrigger = this.homey.flow.getDeviceTriggerCard('people_changed');
+    logBook.attach(this.homey); // the "Logging" tab of the app settings
     this.log('Aqara FP Zones started');
   }
 

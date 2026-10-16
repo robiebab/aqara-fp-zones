@@ -1,5 +1,33 @@
 <div class="fp" id="fp">
   <h2 data-t="title"></h2>
+
+  <div class="fp-seg fp-seg-strong fp-pages" id="pages" role="tablist">
+    <button data-page="zones" data-t="page_zones"></button>
+    <button data-page="logs" data-t="page_logs"></button>
+  </div>
+
+  <div id="pageLogs" hidden>
+    <div class="fp-panel">
+      <div class="fp-field" style="margin-bottom:8px">
+        <label data-t="logs_enable"></label>
+        <div class="fp-seg" id="logOn">
+          <button data-on="false" data-t="logs_off_btn"></button>
+          <button data-on="true" data-t="logs_on_btn"></button>
+        </div>
+      </div>
+      <p class="fp-note" data-t="logs_hint"></p>
+    </div>
+    <div class="fp-toolbar">
+      <div class="fp-toolbar-row">
+        <select class="fp-input" id="logFilter"><option value="" data-t="logs_all"></option></select>
+        <button class="fp-link" id="logCopy" data-t="logs_copy"></button>
+        <button class="fp-link" id="logClear" data-t="logs_clear"></button>
+      </div>
+    </div>
+    <div class="fp-log" id="logView" role="log" aria-live="polite"></div>
+  </div>
+
+  <div id="pageZones">
   <p data-t="intro"></p>
 
   <div id="sensors"></div>
@@ -74,6 +102,7 @@
     <p class="fp-note" id="areaHint" style="margin-top:12px" hidden></p>
     <p class="fp-note" style="margin-top:6px" data-t="add_hint"></p>
   </div>
+  </div>
 
   <div class="fp-field" style="margin-top:22px">
     <label data-t="theme"></label>
@@ -108,6 +137,99 @@ function onHomeyReady(Homey) {
       Homey.set('theme', themePref, function () {});
     });
   });
+
+  // ---------- tabs: Zones and Logging
+  var page = 'zones';
+  function showPage(p) {
+    page = p;
+    document.querySelectorAll('#pages button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.page === p)); });
+    $('pageZones').hidden = p !== 'zones';
+    $('pageLogs').hidden = p !== 'logs';
+    if (p === 'logs') loadLogs();
+  }
+  document.querySelectorAll('#pages button').forEach(function (b) {
+    b.addEventListener('click', function () { showPage(b.dataset.page); });
+  });
+
+  // ---------- logging: the app's own log lines, live (realtime event 'log'), last 500 kept by the app
+  var logLines = [];
+  var logSources = {};
+  var logEnabled = false;
+  function pad(n, w) { return String(n).padStart(w || 2, '0'); }
+  function logText(l) {
+    var d = new Date(l.t); // shown in the local time of this phone or computer
+    var time = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + '.' + pad(d.getMilliseconds(), 3);
+    return time + '  [' + l.src + ']  ' + l.text;
+  }
+  function renderLogSwitch() {
+    document.querySelectorAll('#logOn button').forEach(function (b) { b.setAttribute('aria-pressed', String((b.dataset.on === 'true') === logEnabled)); });
+  }
+  function logRow(l) {
+    var row = document.createElement('div');
+    row.className = 'fp-log-line' + (l.level === 'error' ? ' error' : '');
+    row.textContent = logText(l);
+    return row;
+  }
+  function addSource(src) {
+    if (logSources[src]) return;
+    logSources[src] = true;
+    var o = document.createElement('option'); o.value = src; o.textContent = src;
+    $('logFilter').appendChild(o);
+  }
+  function renderLogs() {
+    var view = $('logView'); var filter = $('logFilter').value;
+    view.textContent = '';
+    var shown = logLines.filter(function (l) { return !filter || l.src === filter; });
+    if (!shown.length) {
+      var empty = document.createElement('p'); empty.className = 'fp-note'; empty.textContent = t(logEnabled ? 'logs_empty' : 'logs_off');
+      view.appendChild(empty);
+    }
+    shown.forEach(function (l) { view.appendChild(logRow(l)); });
+    view.scrollTop = view.scrollHeight;
+  }
+  function loadLogs() {
+    api('GET', '/logs').then(function (lines) {
+      logLines = lines || [];
+      logLines.forEach(function (l) { addSource(l.src); });
+      renderLogs();
+    }).catch(fail);
+  }
+  Homey.on('log', function (l) {
+    logLines.push(l);
+    if (logLines.length > 500) logLines.shift();
+    addSource(l.src);
+    if (page !== 'logs') return;
+    var filter = $('logFilter').value;
+    if (filter && l.src !== filter) return;
+    var view = $('logView');
+    var atEnd = view.scrollHeight - view.scrollTop - view.clientHeight < 40; // follow only when at the end
+    if (view.querySelector('.fp-note')) view.textContent = '';
+    view.appendChild(logRow(l));
+    while (view.children.length > 500) view.removeChild(view.firstChild);
+    if (atEnd) view.scrollTop = view.scrollHeight;
+  });
+  Homey.get('logging', function (err, v) { logEnabled = !err && v === true; renderLogSwitch(); });
+  document.querySelectorAll('#logOn button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      logEnabled = b.dataset.on === 'true'; renderLogSwitch();
+      Homey.set('logging', logEnabled, function (err) { if (err) fail(err); else renderLogs(); });
+    });
+  });
+  $('logFilter').addEventListener('change', renderLogs);
+  $('logClear').addEventListener('click', function () {
+    api('DELETE', '/logs').then(function () { logLines = []; renderLogs(); }).catch(fail);
+  });
+  $('logCopy').addEventListener('click', function () {
+    var filter = $('logFilter').value;
+    var text = logLines.filter(function (l) { return !filter || l.src === filter; }).map(logText).join('\n');
+    var done = function () { toast(t('logs_copied')); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { copyFallback(text); done(); });
+    else { copyFallback(text); done(); }
+  });
+  function copyFallback(text) {
+    var area = document.createElement('textarea'); area.value = text; document.body.appendChild(area);
+    area.select(); try { document.execCommand('copy'); } catch (e) { /* not allowed */ } document.body.removeChild(area);
+  }
 
   var toastEl = document.createElement('div');
   toastEl.className = 'fp-toast';
@@ -312,7 +434,7 @@ function onHomeyReady(Homey) {
 
   function refresh() {
     // nothing to update while the page is not visible (other app or tab in front)
-    if (!token || document.hidden) return Promise.resolve();
+    if (!token || document.hidden || page !== 'zones') return Promise.resolve();
     return api('GET', '/fp400/' + encodeURIComponent(token)).then(function (res) {
       live = res;
       if (!live.areas) live.areas = { ignore: [], outside: [] };
@@ -451,6 +573,7 @@ function onHomeyReady(Homey) {
     }).catch(fail);
   });
 
+  showPage('zones');
   api('GET', '/fp400').then(function (list) { Homey.ready(); renderSensors(list); })
     .catch(function (err) { Homey.ready(); Homey.alert(err.message || String(err)); });
 }

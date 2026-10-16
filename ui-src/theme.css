@@ -208,3 +208,13 @@ button.fp-pill { cursor: pointer; -webkit-appearance: none; appearance: none; }
 .fp input[type=number] { -moz-appearance: textfield; }
 .fp-map-bar-top { margin: 0 2px 8px; }
 
+
+/* ---------- app settings: page tabs and the logging tab */
+.fp .fp-pages { margin: 4px 0 18px; }
+.fp .fp-toolbar select.fp-input { flex: 1; min-width: 0; height: 40px; padding: 0 10px; }
+.fp .fp-log { background: var(--floor); border: 1px solid var(--line); border-radius: var(--radius-s, 12px); padding: 10px 12px; margin-top: 10px;
+  height: 60vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink); }
+.fp .fp-log-line { white-space: pre-wrap; word-break: break-word; padding: 1px 0; }
+.fp .fp-log-line.error { color: var(--danger); }
+.fp .fp-log .fp-note { margin: 4px 0; }

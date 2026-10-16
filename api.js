@@ -1,5 +1,7 @@
 'use strict';
 
+const logBook = require('./lib/logBook');
+
 function requireSensor(homey, token) {
   const device = homey.app.getSensor(token);
   if (!device) throw new Error('Sensor not found');
@@ -45,6 +47,16 @@ module.exports = {
   async putArea({ homey, params, body }) {
     const device = requireSensor(homey, params.token);
     return device.setArea(params.type, body && body.cells);
+  },
+
+  /** Logging tab: the kept lines (newest last). New lines arrive as realtime event 'log'. */
+  async getLogs() {
+    return logBook.lines();
+  },
+
+  async clearLogs() {
+    logBook.clear();
+    return { ok: true };
   },
 
   async forgetTarget({ homey, params }) {

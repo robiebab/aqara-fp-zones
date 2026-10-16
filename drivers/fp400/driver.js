@@ -1,8 +1,9 @@
 'use strict';
 
 const { ZigBeeDriver } = require('homey-zigbeedriver');
+const { withLogBook } = require('../../lib/logBook');
 
-class FP400Driver extends ZigBeeDriver {
+class FP400Driver extends withLogBook(ZigBeeDriver) {
 
   async onInit() {
     this.learningDoneTrigger = this.homey.flow.getDeviceTriggerCard('fp400_learning_done');

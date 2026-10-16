@@ -1,6 +1,6 @@
 {
   "id": "nl.community.aqarafpzones",
-  "version": "0.8.7",
+  "version": "0.9.1",
   "compatibility": ">=12.2.0",
   "sdk": 3,
   "platforms": [
@@ -61,6 +61,14 @@
     "putRange": {
       "method": "PUT",
       "path": "/fp400/:token/range"
+    },
+    "getLogs": {
+      "method": "GET",
+      "path": "/logs"
+    },
+    "clearLogs": {
+      "method": "DELETE",
+      "path": "/logs"
     }
   },
   "source": "https://github.com/robiebab/aqara-fp-zones"

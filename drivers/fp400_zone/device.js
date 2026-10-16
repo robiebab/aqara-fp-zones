@@ -1,6 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
+const { withLogBook } = require('../../lib/logBook');
 
 /**
  * Virtual device for one software zone of an FP400. It follows the zone state that the
@@ -9,7 +10,7 @@ const Homey = require('homey');
  * The device is linked to its zone by the zone's unique id (store "uid"), not by slot number.
  * A slot can be reused for a new zone; the id makes sure an old device never takes over a new zone.
  */
-class FP400ZoneDevice extends Homey.Device {
+class FP400ZoneDevice extends withLogBook(Homey.Device) {
 
   async onInit() {
     this.parentToken = this.getStoreValue('parentToken');

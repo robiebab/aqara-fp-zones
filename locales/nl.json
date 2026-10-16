@@ -68,7 +68,7 @@
     "live_fp300_pir": "Deze sensor staat op \"Alleen PIR\". Zet in de instellingen Detectie met op mmWave, anders is er geen afstand."
   },
   "editor": {
-    "title": "Zones",
+    "title": "FP Zones",
     "intro": "Pas je zones aan, of kleur negeerplekken en wat buiten de kamer valt.",
     "no_sensor": "Er is nog geen FP300 of FP400 toegevoegd.",
     "no_zones": "Nog geen zones. Een zone maak je via Apparaat toevoegen, Aqara FP Zones, Zone (FP300 / FP400).",
@@ -137,7 +137,19 @@
     "hint_range": "Waar de sensor zelf aanwezigheid ziet. Loop door de ruimte: het blok waarin je staat licht op. Kleur de blokken waar hij je moet zien en sla op. Daarna werkt de sensor op zijn eigen aanwezigheid, zonder doorlopende afstandsmeting.",
     "range_info": "Detecteert van __from__ tot __to__ m (__count__ blokken)",
     "range_none": "Nog geen blokken gekozen",
-    "occupied_plain": "Bezet"
+    "occupied_plain": "Bezet",
+    "page_zones": "Zones",
+    "page_logs": "Logging",
+    "logs_enable": "Logging",
+    "logs_hint": "Laat live zien wat de app doet, dezelfde regels als bij homey app run. De laatste 500 regels blijven bewaard tot je ze wist of de app herstart. Zet het uit als je klaar bent; dat scheelt geheugen.",
+    "logs_all": "Alle bronnen",
+    "logs_copy": "Kopiëren",
+    "logs_clear": "Wissen",
+    "logs_copied": "Log gekopieerd",
+    "logs_empty": "Nog geen regels. Zodra er iets gebeurt, verschijnt het hier.",
+    "logs_off": "Logging staat uit. Zet hem aan om regels te zien.",
+    "logs_on_btn": "Aan",
+    "logs_off_btn": "Uit"
   },
   "actions": {
     "identify": "Identificeren",
