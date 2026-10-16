@@ -46,7 +46,7 @@ function device(settings, answer = () => ({})) {
     triggers: Object.fromEntries(['target_distance_changed', 'distance_below', 'distance_above', 'entered_range', 'left_range']
       .map(k => [k, { trigger: async (dev, tokens) => { if (k === 'target_distance_changed') d.cards.push(`distance ${tokens.target_distance}`); } }])) };
   Object.assign(d, { _pending: new Map(), _oneShots: new Map(), _flushing: false, token: 'S', _lastEmitted: '', _lastDistanceAt: 0, _lastTrackStart: 0,
-    _viewerTrackAt: 0, _mmwave: null, _pir: null, _session: false, _wake: new WakePattern([]), _lastStructAt: clock, _pendingConfigRead: false, _pendingReportingRefresh: false });
+    _viewerTrackAt: 0, _mmwave: null, _pir: null, _session: false, _stateKnown: true, _wake: new WakePattern([]), _lastStructAt: clock, _pendingConfigRead: false, _pendingReportingRefresh: false });
   d.tracker = new BlockTracker(d.getZones());
   d.writes = []; d.reads = [];
   d.lumi = {
@@ -213,6 +213,16 @@ async function test(name, fn) { await fn(); passed++; console.log(`ok   ${name}`
     await at(d, '16:00:02.000', DIST, 150, 0x23);                  // the same distance again
     await at(d, '16:00:03.000', DIST, 175, 0x23);
     assert.deepStrictEqual(d.cards.filter(c => /^distance/.test(c)), ['distance 1.5', 'distance 1.75']);
+  });
+
+  await test('after a restart the real state is read at the first wake moment: no motion alarm left on from before', async () => {
+    const d = device({}, names => (names.includes('presence') ? { [MMW]: 0, [PIR]: 0 } : {}));
+    d._caps.alarm_motion = true;                                    // as stored before the restart
+    d._stateKnown = false;
+    await at(d, '17:00:00.000', 0x0198, 1);                         // any message from the sensor (a wake moment)
+    await new Promise(r => setTimeout(r, 10));
+    assert.strictEqual(d._caps.alarm_motion, false, 'the sensor says nobody: alarm off');
+    assert.ok(d.reads.includes('presence+pirDetection'));
   });
 
   Date.now = realNow;

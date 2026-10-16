@@ -398,5 +398,9 @@
   "0.9.1": {
     "en": "Logging: the zone wizard logs every step and error, and a newly paired FP300/FP400 logs its Zigbee details.",
     "nl": "Logging: de zone wizard logt elke stap en fout, en een nieuw gekoppelde FP300/FP400 logt zijn Zigbee gegevens."
+  },
+  "0.9.2": {
+    "en": "Fixed: FP300 zones no longer fire 'entered/left the zone' on every crossing of the edge; the cards follow the zone (together with its motion alarm). After a restart the FP300 reads its real presence at the first wake moment, so the motion alarm never stays on from before.",
+    "nl": "Opgelost: FP300 zones laten 'kwam binnen/verliet de zone' niet meer bij elke overschrijding van de rand afgaan; de kaarten volgen de zone (tegelijk met het bewegingsalarm). Na een herstart leest de FP300 bij het eerste wakkere moment zijn echte aanwezigheid, zodat het bewegingsalarm nooit aan blijft staan van daarvoor."
   }
 }

@@ -5,6 +5,10 @@
       "title": {
         "en": "A person entered the zone",
         "nl": "Een persoon kwam de zone binnen"
+      },
+      "hint": {
+        "nl": "FP400 zone: bij elke persoon die de zone binnenkomt. FP300 zone: als de zone bezet raakt (tegelijk met het bewegingsalarm van de zone).",
+        "en": "FP400 zone: for every person entering the zone. FP300 zone: when the zone becomes occupied (together with the zone's motion alarm)."
       }
     },
     {
@@ -12,6 +16,10 @@
       "title": {
         "en": "A person left the zone",
         "nl": "Een persoon verliet de zone"
+      },
+      "hint": {
+        "nl": "FP400 zone: bij elke persoon die de zone verlaat. FP300 zone: als de zone leeg is, na de ‘leeg na’ tijd (tegelijk met het bewegingsalarm van de zone).",
+        "en": "FP400 zone: for every person leaving the zone. FP300 zone: when the zone is empty, after its ‘empty after’ time (together with the zone's motion alarm)."
       }
     }
   ]

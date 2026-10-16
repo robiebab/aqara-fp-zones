@@ -54,8 +54,9 @@ class FP400ZoneDevice extends withLogBook(Homey.Device) {
     if (!state) return;
     if (!this.getAvailable()) await this.setAvailable();
 
+    const wasOccupied = this.getCapabilityValue('alarm_motion');
     if (state.available) {
-      if (this.getCapabilityValue('alarm_motion') !== state.occupied) {
+      if (wasOccupied !== state.occupied) {
         await this.setCapabilityValue('alarm_motion', state.occupied);
       }
       if (this.hasCapability('people_count') && this.getCapabilityValue('people_count') !== state.count) {
@@ -64,6 +65,17 @@ class FP400ZoneDevice extends withLogBook(Homey.Device) {
       }
     }
 
+    // The cards "a person entered / left the zone":
+    //  FP300 zone: follows the zone's state. The FP300 measures one distance, and at the edge of a zone
+    //    it goes back and forth (1.95, 2.05, 1.9 m) while the zone stays occupied; firing on every
+    //    crossing would switch flows on and off. So: entered when the zone becomes occupied, left when
+    //    it becomes empty (after its "empty after" time), exactly together with the zone's motion alarm.
+    //  FP400 zone: per person (it sees several people), on every enter and leave.
+    if (parent.kind === 'fp300') {
+      if (state.available && state.occupied && wasOccupied !== true) this.driver.enteredTrigger.trigger(this).catch(this.error);
+      if (state.available && !state.occupied && wasOccupied === true) this.driver.leftTrigger.trigger(this).catch(this.error);
+      return;
+    }
     for (const event of events) {
       if (event.slot !== slot) continue;
       const card = event.type === 'enter' ? this.driver.enteredTrigger : this.driver.leftTrigger;

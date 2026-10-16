@@ -96,10 +96,13 @@ class FP300Device extends withLogBook(ZigBeeDevice) {
     this.tracker.update(this._zonePresence(), null, Date.now());
     // absence timeouts of zones run on Homey's clock, not on sensor reports
     // zone "empty after" times: one timer for the next moment a zone changes (see scheduleZoneDeadline)
-    // What the sensor last reported: null until the first report or read after this start.
+    // What the sensor last reported: null until the first report or read after this start. At the first
+    // wake moment the app reads both, so the motion alarm (and its cards) never keep the state of before
+    // the restart.
     this._mmwave = null;
     this._pir = null;
     this._session = false;
+    this._stateKnown = false;
     // Read the configuration (and firmware) only when there is a reason: never read yet, or a new app
     // version. The settings in the sensor do not change by themselves. A rejoin or "restore defaults"
     // asks for it too (onEndDeviceAnnounce, _resetDefaults).
@@ -195,6 +198,7 @@ class FP300Device extends withLogBook(ZigBeeDevice) {
    */
   async _handleLumiAttributes(attrs) {
     const changes = [];
+    if (attrs[0x0142] !== undefined && attrs[0x014d] !== undefined) this._stateKnown = true;
     if (attrs[0x0142] !== undefined && (attrs[0x0142] === 1) !== this._mmwave) {
       this._mmwave = attrs[0x0142] === 1;
       if (this._mmwave) this._reportsSinceStart = 0; // the radar only now has someone to measure
@@ -521,7 +525,8 @@ class FP300Device extends withLogBook(ZigBeeDevice) {
     const hk = this._housekeepingAllowed();
     const pushJob = awake && hk && this._pendingReportingRefresh;
     const reads = hk && (this._pendingStructRead || this._pendingConfigRead);
-    if (!this._pending.size && !reads && !oneShots && !pushJob) return;
+    const stateRead = awake && !this._stateKnown; // first wake after a start: read presence and PIR
+    if (!this._pending.size && !reads && !oneShots && !pushJob && !stateRead) return;
     Promise.resolve().then(() => this._flush(awake)).catch(this.error);
   }
 
@@ -575,6 +580,10 @@ class FP300Device extends withLogBook(ZigBeeDevice) {
       }
       // Housekeeping is checked again before every step: the first read (presence) can itself reveal
       // that someone is there (log of 15 October, kitchen), and then the rest waits for "nobody".
+      if (awake && !this._stateKnown) {
+        await this.lumi.readAttributes(['presence', 'pirDetection']); // the answer passes _handleLumiAttributes
+        this._stateKnown = true;
+      }
       if (this._housekeepingAllowed() && this._pendingConfigRead) {
         await this.lumi.readAttributes(['presence', 'pirDetection']).catch(err => this.log('Reading presence failed', err.message));
         if (this._housekeepingAllowed()) {
