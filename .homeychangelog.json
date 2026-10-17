@@ -402,5 +402,9 @@
   "0.9.2": {
     "en": "Fixed: FP300 zones no longer fire 'entered/left the zone' on every crossing of the edge; the cards follow the zone (together with its motion alarm). After a restart the FP300 reads its real presence at the first wake moment, so the motion alarm never stays on from before.",
     "nl": "Opgelost: FP300 zones laten 'kwam binnen/verliet de zone' niet meer bij elke overschrijding van de rand afgaan; de kaarten volgen de zone (tegelijk met het bewegingsalarm). Na een herstart leest de FP300 bij het eerste wakkere moment zijn echte aanwezigheid, zodat het bewegingsalarm nooit aan blijft staan van daarvoor."
+  },
+  "0.9.3": {
+    "en": "Fixed: FP300 light, temperature and humidity did not update since 0.7.1. They use the Zigbee library's own report handling again (which finds the right endpoint), still only updating on a changed value.",
+    "nl": "Opgelost: FP300 licht, temperatuur en luchtvochtigheid werkten niet meer bij sinds 0.7.1. Ze gebruiken weer de eigen rapportverwerking van de Zigbee bibliotheek (die het juiste endpoint vindt), en worden nog steeds alleen bij een veranderde waarde bijgewerkt."
   }
 }

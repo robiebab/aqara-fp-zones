@@ -130,14 +130,7 @@ class FP300Device extends withLogBook(ZigBeeDevice) {
     // settings, so no standard reporting is configured for them.
     // (Earlier versions did, which filled the sensor's report table: INSUFFICIENT_SPACE.)
     // Offsets and decimals (temperature_offset/_decimals, humidity_offset/_decimals)
-    // Like presence and PIR: only a CHANGED value is set (and logged); the same value again is ignored.
-    this._listenMeasurement('measure_temperature', CLUSTER.TEMPERATURE_MEASUREMENT.NAME,
-      raw => this._withOffset(raw / 100, 'temperature', -65, 65));
-    this._listenMeasurement('measure_humidity', CLUSTER.RELATIVE_HUMIDITY_MEASUREMENT.NAME,
-      raw => this._withOffset(raw / 100, 'humidity', 0, 100));
-    // ZCL: MeasuredValue = 10000 x log10(lux) + 1 (same conversion as homey-zigbeedriver)
-    this._listenMeasurement('measure_luminance', CLUSTER.ILLUMINANCE_MEASUREMENT.NAME,
-      raw => (typeof raw === 'number' ? Math.round(10 ** ((raw - 1) / 10000)) : null));
+    this._registerMeasurements();
     // Set up presence/PIR reporting (and remove the standard reports of old versions) when never done,
     // with a new app version, and after the sensor rejoined the network (onEndDeviceAnnounce).
     this._pendingReportingRefresh = this._newSinceLast('reportingVersion');
@@ -714,20 +707,38 @@ class FP300Device extends withLogBook(ZigBeeDevice) {
   }
 
   /**
-   * Temperature, humidity and light reports: set the capability only when the value changed.
-   * The FP300 sends the same value again and again (e.g. light 1 lux every two minutes at night);
-   * those reports change nothing, so they are not set and not logged.
+   * Temperature, humidity and light. Through homey-zigbeedriver's registerCapability: it finds the
+   * endpoint that really has the cluster (my own listener of 0.7.1 to 0.9.2 assumed endpoint 1, and
+   * since then these values no longer updated). Only a CHANGED value is set: the report parser
+   * returns null for the same value again, and then the library skips it (no update, no log line).
    */
-  _listenMeasurement(capability, clusterName, parse) {
-    const cluster = this.zclNode.endpoints[1].clusters[clusterName];
-    if (!cluster) return;
-    cluster.on('attr.measuredValue', raw => {
-      const value = parse(raw);
-      if (value === null || value === undefined || value === this.getCapabilityValue(capability)) return;
-      this.log(`${capability} ${value}`);
-      this.setCapabilityValue(capability, value).catch(this.error);
+  _registerMeasurements() {
+    this.registerCapability('measure_temperature', CLUSTER.TEMPERATURE_MEASUREMENT, {
+      reportParser: raw => this._changedOnly('measure_temperature', this._withOffset(raw / 100, 'temperature', -65, 65)),
     });
+    this.registerCapability('measure_humidity', CLUSTER.RELATIVE_HUMIDITY_MEASUREMENT, {
+      reportParser: raw => this._changedOnly('measure_humidity', this._withOffset(raw / 100, 'humidity', 0, 100)),
+    });
+    // ZCL: MeasuredValue = 10000 x log10(lux) + 1 (same conversion as homey-zigbeedriver)
+    this.registerCapability('measure_luminance', CLUSTER.ILLUMINANCE_MEASUREMENT, {
+      reportParser: raw => this._changedOnly('measure_luminance', typeof raw === 'number' ? Math.round(10 ** ((raw - 1) / 10000)) : null),
+    });
+    this._logMeasurementEndpoints();
   }
+
+  /** Report parser helper: the new value, or null (= skip) when it is the same as the current one. */
+  _changedOnly(capability, value) {
+    if (value === null || value === undefined || Number.isNaN(value)) return null;
+    return value === this.getCapabilityValue(capability) ? null : value;
+  }
+
+  /** Once at start: on which endpoint the light, temperature and humidity reports come in. */
+  _logMeasurementEndpoints() {
+    const found = [CLUSTER.ILLUMINANCE_MEASUREMENT, CLUSTER.TEMPERATURE_MEASUREMENT, CLUSTER.RELATIVE_HUMIDITY_MEASUREMENT]
+      .map(c => `${c.NAME} on endpoint ${this.getClusterEndpoint(c) ?? 'none'}`);
+    this.log('Measurements:', found.join(', '));
+  }
+
 
   /** Round to the chosen decimals and add the user's offset; out-of-range values are ignored. */
   _withOffset(raw, kind, min, max) {

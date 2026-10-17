@@ -135,17 +135,32 @@ async function test(name, fn) { await fn(); passed++; console.log(`ok   ${name}`
     assert.strictEqual(d.zoneStates()[1].occupied, false);
   });
 
-  await test('temperature, humidity and light: only a changed value is set and logged', async () => {
+  await test('temperature, humidity and light: found on any endpoint, only a changed value is set and logged', async () => {
+    const { ZCLNode } = require('zigbee-clusters');
     const d = device({}, () => ({}));
-    const clusters = { temperatureMeasurement: new EventEmitter(), relativeHumidity: new EventEmitter(), illuminanceMeasurement: new EventEmitter() };
-    d.zclNode = { endpoints: { 1: { clusters } } };
-    d._listenMeasurement('measure_luminance', 'illuminanceMeasurement', raw => Math.round(10 ** ((raw - 1) / 10000)));
-    d._listenMeasurement('measure_temperature', 'temperatureMeasurement', raw => d._withOffset(raw / 100, 'temperature', -65, 65));
-    for (const raw of [1, 1, 1]) clusters.illuminanceMeasurement.emit('attr.measuredValue', raw);   // 1 lux three times
-    clusters.illuminanceMeasurement.emit('attr.measuredValue', 20001);                              // 100 lux
-    for (const raw of [2150, 2150, 2160]) clusters.temperatureMeasurement.emit('attr.measuredValue', raw);
-    assert.deepStrictEqual(d.logs.filter(l => /^measure_/.test(l)), ['measure_luminance 1', 'measure_luminance 100', 'measure_temperature 21.5', 'measure_temperature 21.6']);
+    // a node whose light cluster is on endpoint 2 (not 1): the cause of "light does not update" in 0.7.1 to 0.9.2
+    d.zclNode = new ZCLNode({ sendFrame: async () => {}, endpointDescriptors: [
+      { endpointId: 1, inputClusters: [0x0000, 0x0402, 0x0405, 0xfcc0] }, { endpointId: 2, inputClusters: [0x0400] }] });
+    d.getClusterEndpoint = c => Number(Object.keys(d.zclNode.endpoints).find(id => d.zclNode.endpoints[id].clusters[c.NAME]));
+    // what homey-zigbeedriver does with registerCapability (parseAttributeReport): null from the parser = skip
+    d.registerCapability = (cap, cluster, { reportParser }) => {
+      d.zclNode.endpoints[d.getClusterEndpoint(cluster)].clusters[cluster.NAME].on('attr.measuredValue', raw => {
+        const value = reportParser(raw);
+        if (value === null) return;
+        d.logs.push(`handle report ${cap} ${value}`);
+        d._caps[cap] = value;
+      });
+    };
+    d._registerMeasurements();
+    const report = (ep, cluster, value) => d.zclNode.endpoints[ep].handleFrame(cluster, Buffer.from([0x18, 1, 0x0a, 0, 0, cluster === 0x0402 ? 0x29 : 0x21, value & 0xff, (value >> 8) & 0xff]), {});
+    for (const raw of [1, 1, 20001, 20001, 1]) await report(2, 0x0400, raw);         // 1, 1, 100, 100, 1 lux
+    for (const raw of [2150, 2150, 2160]) await report(1, 0x0402, raw);              // 21.5, 21.5, 21.6 °C
+    assert.ok(d.logs.some(l => /illuminanceMeasurement on endpoint 2/.test(l)), 'logs where the light cluster is');
+    assert.deepStrictEqual(d.logs.filter(l => /^handle report/.test(l)), [
+      'handle report measure_luminance 1', 'handle report measure_luminance 100', 'handle report measure_luminance 1',
+      'handle report measure_temperature 21.5', 'handle report measure_temperature 21.6']);
   });
+
 
   await test('status messages the sensor sends by itself: nothing logged, battery only when it changed', async () => {
     const d = device({}, () => ({}));
